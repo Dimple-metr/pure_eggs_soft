@@ -1,0 +1,17 @@
+TRUNCATE `tbl_excess`;
+TRUNCATE `tbl_general_book`;
+TRUNCATE `tbl_invoice`;
+TRUNCATE `tbl_invoicetrn`;
+TRUNCATE `tbl_journal`;
+TRUNCATE `tbl_journal_trn`;
+TRUNCATE `tbl_pono`;
+TRUNCATE `tbl_potrancation`;
+TRUNCATE `tbl_receipt`;
+TRUNCATE `tbl_receipt_trn`;
+TRUNCATE `tbl_stock_in`;
+TRUNCATE `tbl_stock_in_trn`;
+TRUNCATE `tbl_stock_out`;
+TRUNCATE `tbl_stock_out_trn`;
+TRUNCATE `tbl_stock_transfer`;
+TRUNCATE `tbl_stock_transfer_trn`;
+TRUNCATE `tbl_used_tax`;

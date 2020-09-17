@@ -1,0 +1,6 @@
+Db:-
+1)  users -----------    vehicle_no
+2) add series type return invoice
+3) bill_type  update type int
+4) tbl_invoice  -------  type_id
+5) tbl_general_book ---- ref_date

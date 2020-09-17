@@ -1,0 +1,322 @@
+<?php
+session_start();
+$AJAX = true;
+include("../../config/config.php");
+//error_reporting(E_ALL);
+include("../../config/session.php");
+include("../../include/function_database_query.php");
+include_once("../../include/common_functions.php");
+
+if($_POST != NULL) {
+	$POST = bulk_filter($dbcon,$_POST);
+}
+else {
+	$POST = bulk_filter($dbcon,$_GET);
+}
+		
+		if(strtolower($POST['mode']) == "fetch") {
+			
+		$s_date=explode(' - ',$POST['date']);
+		$_SESSION['start']=$s_date[0];
+		$_SESSION['end']=$s_date[1];
+		
+		$where='';
+			
+			$where.="  and stock_in_date>='".date('Y-m-d',strtotime($s_date[0]))."' AND stock_in_date<='".date('Y-m-d',strtotime($s_date[1]))."'";
+			$appData = array();
+			$i=1;
+			$aColumns = array('stock_in_id','us.user_name','stock_in_no','stock_in_date','po.employee_id','status','po.cdate','po.user_id');
+			$sIndexColumn = "stock_in_id";
+			$isWhere = array("status = 0".$where.check_user('po'));
+			$sTable = "tbl_stock_in as po";			
+			$isJOIN = array("left join users as us on us.user_id=po.employee_id");
+			$hOrder = "po.stock_in_id desc";
+			include('../../include/pagging.php');
+			$appData = array();
+			$id=1;
+			foreach($sqlReturn as $row) {
+				$row_data = array();
+				$row_data[] = $row['stock_in_no'];
+				$row_data[] = date('d M, Y',strtotime($row['stock_in_date']));
+				$row_data[] = $row['user_name'];
+				$addpayment='';$delete='';$edit='';
+				
+					
+					$delete='<button class="btn btn-xs btn-danger" data-original-title="Delete" data-toggle="tooltip" data-placement="top" onClick="delete_invoice('.$row['stock_in_id'].')"><i class="fa fa-trash-o"></i></button>';
+					//$view='<a class="btn btn-xs btn-info" data-original-title="View" data-toggle="tooltip" data-placement="top" href="'.ROOT.'purchase_view/'.$row['po_id'].'"><i class="fa fa-eye"></i></a> ';
+					
+					//$edit='<a class="btn btn-xs btn-warning" data-original-title="Edit" data-toggle="tooltip" data-placement="top" href="'.ROOT.'stock_in_edit/'.$row['stock_in_id'].'"><i class="fa fa-pencil"></i></a>';
+					$row_data[] = $edit.' '.$delete.' '.$view;
+			 
+			$appData[] = $row_data;
+			$id++;
+			}
+			$output['aaData'] = $appData;
+			echo json_encode( $output );
+		}
+		else if(strtolower($POST['mode']) == "add") {
+								update_series_no($dbcon,"6");
+							$info['stock_in_no']	= $POST['stock_in_no'];
+							$info['employee_id']	= $POST['employee_id'];
+							$info['stock_in_date']	= date('Y-m-d',strtotime($POST['stock_in_date']));
+							$info['remark']			= text_rnremove($_POST['remark']);
+							$info['cdate']			= date("Y-m-d H:i:s");
+							$info['user_id']		= $_SESSION['user_id'];
+							$info['company_id']		= $_SESSION['company_id'];
+							$inserpoid=add_record('tbl_stock_in', $info, $dbcon);
+				
+					foreach ($POST['stock_out_trn_id'] as $key => $name)
+						{
+							$info1['stock_in_id']		= $inserpoid;
+							$info1['stock_out_id']		= $POST['stock_out_id'][$key];
+							$info1['stock_out_trn_id']	= $POST['stock_out_trn_id'][$key];
+							$info1['product_id']		= $POST['product_id'][$key];
+							$info1['product_qty']		= $POST['product_qty'][$key];
+							$info1['transfer_out']		= $POST['transfer_out'][$key];
+							$info1['transfer_in']		= $POST['transfer_in'][$key];
+							$info1['unit_id']			= $POST['unit_id'][$key];
+							$info1['return_qty']		= $POST['return_qty'][$key];
+							$info1['sales_qty']			= $POST['sales_qty'][$key];
+							$info1['replace_qty']		= $POST['replace_qty'][$key];
+							$info1['rate']				= $POST['rate'][$key];
+							$info1['amount']			= $POST['amount'][$key];
+							$info1['cdate']				= date("Y-m-d H:i:s");
+							$info1['user_id']			= $_SESSION['user_id'];
+							
+							$insertrnid=add_record('tbl_stock_in_trn', $info1, $dbcon);
+							
+							$info_out['done_status']=1;
+							$info_out['stock_in_id']=$info1['stock_in_id'];
+							$updateid1=update_record('tbl_stock_out',$info_out,"stock_out_id=".$info1['stock_out_id'] , $dbcon);
+						}
+				
+					if(isset($POST['save_print']))
+					{
+						$arr['printstatus']=$POST['print_status'];
+						$arr['msg']="1";
+						$arr['eid']=$inserpoeid;
+					}
+					else
+					{
+						if($inserpoid)
+						{	
+							$arr['msg']="1";							
+						}
+						else
+							$arr['msg']="0";
+					}
+			echo json_encode($arr);					
+		 
+		}		
+		else if(strtolower($POST['mode']) == "edit") {
+							$info['stock_in_no']	= $POST['stock_in_no'];
+							$info['employee_id']	= $POST['employee_id'];
+							$info['stock_in_date']	= date('Y-m-d',strtotime($POST['stock_in_date']));
+							$info['remark']			= text_rnremove($_POST['remark']);
+							$info['cdate']				= date("Y-m-d H:i:s");
+							$info['user_id']			= $_SESSION['user_id'];
+							$info['company_id']		= $_SESSION['company_id'];
+							$updateid=update_record('tbl_stock_in', $info,"stock_in_id=".$POST['eid'] , $dbcon);
+					$deleteid=delete_record('tbl_stock_in_trn',"stock_in_id=".$POST['eid'], $dbcon);
+						foreach ($POST['stock_out_trn_id'] as $key => $name)
+						{
+							$info1['stock_in_id']		= $POST['eid'];
+							$info1['stock_out_id']		= $POST['stock_out_id'][$key];
+							$info1['stock_out_trn_id']	= $POST['stock_out_trn_id'][$key];
+							$info1['product_id']		= $POST['product_id'][$key];
+							$info1['product_qty']		= $POST['product_qty'][$key];
+							$info1['transfer_out']		= $POST['transfer_out'][$key];
+							$info1['transfer_in']		= $POST['transfer_in'][$key];
+							$info1['unit_id']			= $POST['unit_id'][$key];
+							$info1['return_qty']		= $POST['return_qty'][$key];
+							$info1['sales_qty']			= $POST['sales_qty'][$key];
+							$info1['replace_qty']		= $POST['replace_qty'][$key];
+							$info1['rate']				= $POST['rate'][$key];
+							$info1['amount']			= $POST['amount'][$key];
+							$info1['cdate']				= date("Y-m-d H:i:s");
+							$info1['user_id']			= $_SESSION['user_id'];
+							
+							$insertrnid=add_record('tbl_stock_in_trn', $info1, $dbcon);
+							
+							$info_out['done_status']=1;
+							$info_out['stock_in_id']=$info1['stock_in_id'];
+							$updateid1=update_record('tbl_stock_out',$info_out,"stock_out_id=".$info1['stock_out_id'] , $dbcon);
+						}
+							
+					
+				if(isset($POST['save_print']))
+				{
+					$arr['printstatus']=$POST['print_status'];
+					$arr['msg']="update";
+					$arr['eid']=$POST['eid'];
+				}
+				else
+				{
+					if($updateid)
+					{	
+						$arr['msg']="update";
+						
+					}
+					else
+						$arr['msg']=0;
+				}
+			echo json_encode($arr);	
+			 
+		}
+		else if(strtolower($POST['mode']) == "delete") {
+			$info['status']		= 2;
+			$info1['stock_in_trn_status']		= 2;
+			$info2['done_status']		= 0;
+			$updateinvoiceid=update_record('tbl_stock_in', $info,"stock_in_id=".$POST['eid'] , $dbcon);	
+			$updatetrancationid=update_record('tbl_stock_in_trn', $info1,"stock_in_id=".$POST['eid'] , $dbcon);	
+			
+			$updatetrancationid=update_record('tbl_stock_out', $info2,"stock_in_id=".$POST['eid'] , $dbcon);	
+			
+			if($updateinvoiceid)
+				echo "1";	
+			else
+				echo "0";			
+		}
+		else if(strtolower($POST['mode']) == "load_tempoutward") {
+			$employee_id=$POST['employee_id'];
+			$stock_date=$POST['stock_date'];
+			if(!empty($POST['stock_in_id'])){
+				 $query="select stock_in_trn_id,product.product_name,cat.unit_name,sotrn.*,mst.stock_in_id,mst.return_qty,mst.sales_qty,mst.rate,mst.amount,mst.transfer_out,mst.transfer_in
+				from  tbl_stock_in_trn as mst 
+				left join tbl_stock_out_trn as sotrn on sotrn.stock_out_trn_id=mst.stock_out_trn_id
+				left join unit_mst as cat on cat.unitid=sotrn.unit_id 
+				left join tbl_product as product on product.product_id=sotrn.product_id  
+				where stock_in_trn_status=0 and stock_in_id='".$POST['stock_in_id']."'";
+			}else{
+				 $query="select stock_out_trn_id,sout.stock_out_id,product.product_name,product.product_mst_rate as rate,cat.unit_name,mst.*,(select IFNULL(sum(transfer_qty),0) from tbl_stock_transfer_trn as ptrn
+				left join tbl_stock_transfer as strn on strn.stock_transfer_id=ptrn.stock_transfer_id
+				 where ptrn.product_id=mst.product_id and stock_transfer_trn_status=0 and ptrn.user_id=".$employee_id." and strn.stock_transfer_date='".date('Y-m-d',strtotime($stock_date))."') as transfer_out,(select IFNULL(sum(transfer_qty),0) from tbl_stock_transfer_trn as ptrn
+				 left join tbl_stock_transfer as strn on strn.stock_transfer_id=ptrn.stock_transfer_id
+				 where ptrn.product_id=mst.product_id and stock_transfer_trn_status=0 and strn.employee_id=".$employee_id." and strn.stock_transfer_date='".date('Y-m-d',strtotime($stock_date))."') as transfer_in
+				from  tbl_stock_out_trn as mst 
+				left join tbl_stock_out as sout on sout.stock_out_id=mst.stock_out_id
+				left join unit_mst as cat on cat.unitid=mst.unit_id 
+				left join tbl_product as product on product.product_id=mst.product_id  
+				where stock_out_trn_status=0 and sout.done_status=0 and sout.status=0 and stock_out_date='".date('Y-m-d',strtotime($stock_date))."' and employee_id=".$employee_id;
+			}
+				$result=$dbcon->query($query);
+			
+			echo ' <div class="form-group">
+						<div class="col-md-12 col-xs-12">
+							<table cellspacing="10" style="border-spacing:10px;" class="table12 display table  table-striped table-bordered">
+								<tr id="field" style="background-color: #acaeb1;color: #000d21;">
+									<th class="text-center" width="25%">Product Name</th>
+							<th class="text-center"width="8%">Allocate Qty</th>
+							<th class="text-center"width="8%">Transfer Out</th>
+							<th class="text-center"width="8%">Transfer In</th>
+							<th class="text-center"width="6%" style="display:none;">Per</th>
+							<th class="text-center"width="8%">Return Qty</th>
+							<th class="text-center"width="8%">Sales Qty</th>
+							<th class="text-center"width="8%">Replace Qty</th>
+							<th class="text-center"width="8%">Price</th>
+							<th class="text-center"width="8%"><!--Collection--> Amount</th>
+						</tr>';
+		if(mysqli_num_rows($result)>0)
+		{
+			$i=1;
+			while($rel=mysqli_fetch_assoc($result))
+			{
+				if(empty($POST['stock_in_id'])){
+					$salesqty=load_sales_qty($dbcon,$stock_date,$rel['product_id'],$employee_id,2);
+					$replace_qty=load_sales_qty($dbcon,$stock_date,$rel['product_id'],$employee_id,7);
+				}else{
+					$salesqty=$rel['sales_qty'];
+				}
+				if($salesqty){
+					
+				}else{
+					
+				}
+				
+			 echo '<tr id="fieldtr'.$i.'" >
+					<td data-label="Product Name" style="vertical-align:top;text-align:left">
+						'.$rel['product_name'].'
+						'.(!empty($rel['description'])?'<br/><strong>Desc.</strong> :'.$rel['description']:'').'
+						<input type="hidden" name="product_id[]" id="product_id'.$i.'" value="'.$rel['product_id'].'" />
+					</td>
+					<td data-label="Allocate Qty" style="vertical-align:top;" class="text-center">
+						'.number_format($rel['product_qty'], 0, '.', '').'
+						<input type="hidden" name="product_qty[]" id="product_qty'.$i.'" value="'.$rel['product_qty'].'" />
+					</td>
+					<td data-label="Transfer Out" style="vertical-align:top;" class="text-center">
+						'.number_format($rel['transfer_out'], 0, '.', '').'
+						<input type="hidden" name="transfer_out[]" id="transfer_out'.$i.'" value="'.$rel['transfer_out'].'" />
+					</td>
+					<td data-label="Transfer In" style="vertical-align:top;" class="text-center">
+						'.number_format($rel['transfer_in'], 0, '.', '').'
+						<input type="hidden" name="transfer_in[]" id="transfer_in'.$i.'" value="'.$rel['transfer_in'].'" />
+					</td>
+					<td data-label="Per" style="vertical-align:top;display:none;" class="text-center">';
+							if(empty($rel['unit_name'])){
+								echo '-';
+								echo '<input type="hidden" name="unit_id[]" id="unit_id'.$i.'" value="'.$rel['unit_id'].'" />';
+							}else{
+								echo $rel['unit_name'];
+								echo '<input type="hidden" name="unit_id[]" id="unit_id'.$i.'" value="'.$rel['unit_id'].'" />';
+							}
+							
+					echo'</td>
+					<td data-label="Return Qty" style="vertical-align:top;" class="text-center">
+						<input id="return_qty'.$i.'" name="return_qty[]" type="number" class="form-control wideInput" title="Enter Qty" onkeyup="cal_sales_qty('.$i.');" max="'.$rel['product_qty'].'" value="'.number_format($rel['return_qty'], 0, '.', '').'" placeholder="Return Qty" readonly >
+					</td>
+					<td data-label="Sales Qty" style="vertical-align:top;" class="text-center">
+						<input id="sales_qty'.$i.'" name="sales_qty[]" type="text" class="form-control" title="Sales Qty" value="'.number_format($salesqty, 0, '.', '').'" placeholder="Sales Qty" onkeyup="cal_sales_qty('.$i.');" >
+					</td>
+					<td data-label="Replace Qty" style="vertical-align:top;" class="text-center">
+						<input id="replace_qty'.$i.'" name="replace_qty[]" type="text" class="form-control" title="Replace Qty" value="'.number_format($replace_qty, 0, '.', '').'" placeholder="Replace Qty" onkeyup="cal_sales_qty('.$i.');" >
+					</td>
+					<td data-label="Price" style="vertical-align:top;" class="text-center">
+						<input id="rate'.$i.'" name="rate[]" type="number" class="form-control" title="Product Rate" onkeyup="cal_collection_amount('.$i.');" value="'.$rel['rate'].'" placeholder="Product Rate" >
+					</td>
+					<td data-label="Amount" style="vertical-align:top;" class="text-center">
+						<input id="amount'.$i.'" name="amount[]" type="text" class="form-control" title="Amount" value="'.number_format($rel['amount'], 0, '.', '').'" placeholder="Amount" readonly >
+					</td>
+					<input type="hidden" name="stock_out_trn_id[]" id="stock_out_trn_id'.$i.'" value="'.$rel['stock_out_trn_id'].'" />
+					<input type="hidden" name="stock_out_id[]" id="stock_out_id'.$i.'" value="'.$rel['stock_out_id'].'" />
+					<input type="hidden" name="i[]" id="i'.$i.'" value="'.$i.'" />
+			</tr>';
+			$i++;
+			}
+			echo '
+				<tr style="background-color: #acaeb1;">
+					<td style="text-align: right;color: black;vertical-align: middle;font-weight: 600;"> Total</td>
+					<td data-label="Total Allocate Qty" >
+						<input  type="text" id="grandtotal_product_qty" class="form-control g_tax" style="background-color: #acaeb1;color: #020000;border:3px solid #acaeb1;" title="Total" placeholder="Total" readonly >
+						
+						
+					</td>
+					<td></td>
+					<td></td>
+					<!--<td></td>-->
+					<td data-label="Total Return Qty">
+						<input  type="text" id="grandtotal_return_qty" class="form-control g_tax" title="Total" style="background-color: #acaeb1;color: #020000;border:3px solid #acaeb1;" placeholder="Total" readonly >
+					</td>
+					<td data-label="Total Sales Qty" >
+						<input  type="text" id="grandtotal_sales_qty" class="form-control g_tax" title="Total" style="background-color: #acaeb1;color: #020000;border:3px solid #acaeb1;" placeholder="Total" readonly >
+ 					</td>
+					<td data-label="Total Replace Qty" >
+						<input  type="text" id="grandtotal_replace_qty" class="form-control g_tax" title="Total" style="background-color: #acaeb1;color: #020000;border:3px solid #acaeb1;" placeholder="Total" readonly >
+ 					</td>
+					<td></td>
+					<td data-label="Total Amount" >
+						<input  type="text" id="grandtotal_amount" class="form-control g_tax" title="Total" style="background-color: #acaeb1;color: #020000;border:3px solid #acaeb1;" placeholder="Total" readonly >
+					</td>
+				</tr>
+			';
+		}
+		else{
+		echo '<tr><td colspan="10" class="text-center">NO DATA FOUND</td></tr>';
+			}
+			echo '
+	 
+		</table>			 
+							</div>
+                           
+							</div>	';
+		}
+?>

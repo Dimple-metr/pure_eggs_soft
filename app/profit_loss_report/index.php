@@ -1,0 +1,304 @@
+<?php
+
+session_start();
+$AJAX = true;
+include("../../config/config.php");
+//error_reporting(E_ALL);
+include("../../config/session.php");
+include("../../include/function_database_query.php");
+include_once("../../include/profit_loss_functions.php");
+
+$POST = ($_POST != NULL)? bulk_filter($dbcon,$_POST) : bulk_filter($dbcon,$_GET); 
+		
+if(strtolower($POST['mode']) == "load_profit_loss") {
+    $companyName = get_company_name($dbcon);
+			
+    $s_date = explode(' - ',$POST['date']);
+    $start_date = date('Y-m-d',strtotime($s_date[0]));
+    $end_date = date('Y-m-d',strtotime($s_date[1]));
+//    $year = date('Y', strtotime($end_date));
+//    $start_date = date($year.'-04-01',strtotime($end_date));
+    $where_date = (isset($end_date) && !empty($end_date)) ? " between '".$start_date."' and '".$end_date."'" : " < '".$start_date."'" ;
+		
+    $purchase_ac_value = purchase_ac_value($dbcon,$where_date);
+    $sales_ac_value = sales_ac_value($dbcon,$where_date);
+    $opening_stock_value = opening_stock_value($dbcon,$start_date);
+    $direct_expance_value = direct_expance_value($dbcon,$where_date);
+    $direct_income_value = direct_income_value($dbcon,$where_date);
+    $indirect_expances_value = indirect_expances_value($dbcon,$where_date);
+    $indirect_income_value = indirect_income_value($dbcon,$where_date);
+			
+    $inventory_management = $dbcon->query("SELECT inventory_management FROM tbl_company as comp WHERE company_id=".$_SESSION['company_id'])
+                ->fetch_object()->inventory_management;
+
+    if($inventory_management){
+        $closing_balance = $dbcon->query("SELECT sum(closing_balance) as closing_bal
+                                FROM tbl_closing_balance 
+                                WHERE closing_balance_date = ( SELECT MAX(closing_balance_date) 
+                                    FROM tbl_closing_balance 
+                                    WHERE status = ".ACTIVE." AND closing_balance_date <= '".$end_date."')")
+                                ->fetch_object()->closing_bal;
+    
+    } else {
+        $closing_balance = (float)($purchase_ac_value - $sales_ac_value);
+    }
+    $closing_stock = number_format($closing_balance, 2, '.', '');
+    $exp = $opening_stock_value + $purchase_ac_value + $direct_expance_value;
+    $incom = $closing_stock + $sales_ac_value + $direct_income_value;
+    $net_incom = $net_exp = $gross_profit = $gross_loss = $net_profit = $net_loss = 0;
+    
+    if($exp > $incom){
+            $gross_loss = $exp - $incom;
+            $total_exp = $exp;
+            $total_income = $gross_loss + $incom;
+            $net_exp = ($gross_loss + $indirect_expances_value) - $indirect_income_value;
+    } else {
+            $gross_profit = $incom - $exp;
+            $total_exp = $gross_profit + $exp;
+            $total_income = $incom;
+            $net_incom = ($gross_profit + $indirect_income_value) - $indirect_expances_value;
+    }
+				
+    if($net_exp>$net_incom){
+            $net_loss = $net_exp - $net_incom;
+            $gtotal_exp = $gross_loss + $indirect_expances_value;
+            $gtotal_profit = $gross_profit + $indirect_income_value + $net_loss;
+    }else{
+            $net_profit = $net_incom - $net_exp;
+            $gtotal_exp = $gross_loss + $indirect_expances_value + $net_profit;
+            $gtotal_profit = $gross_profit + $indirect_income_value;
+    }
+				
+    $gross_profit = number_format((float)$gross_profit, 2, '.', '');
+    $gross_loss = number_format((float)$gross_loss, 2, '.', '');
+    $total_exp = number_format((float)$total_exp, 2, '.', '');
+    $total_income = number_format((float)$total_income, 2, '.', '');
+    $net_profit = number_format((float)$net_profit, 2, '.', '');
+    $net_loss = number_format((float)$net_loss, 2, '.', '');
+    $gtotal_exp = number_format((float)$gtotal_exp, 2, '.', '');
+    $gtotal_profit = number_format((float)$gtotal_profit, 2, '.', '');
+			
+    $indirect_income_value_details = $indirect_expense_value_details = $direct_expance_value_details =
+    $direct_income_value_details = $purchase_ac_value_details = $sales_ac_value_details = 
+    $opening_stock_value_details = $closing_stock_value_details = '';
+    
+    if(strtolower($POST['show_details']) == "true") {
+        $indirect_income_value_details = indirect_income_value_details($dbcon,$where_date);
+        $indirect_expense_value_details = indirect_expense_value_details($dbcon,$where_date);
+        $direct_expance_value_details = direct_expance_value_details($dbcon,$where_date);
+        $direct_income_value_details = direct_income_value_details($dbcon,$where_date);
+        $purchase_ac_value_details = purchase_ac_value_details($dbcon,$where_date);
+        $sales_ac_value_details = sales_ac_value_details($dbcon,$where_date);
+        $opening_stock_value_details = opening_stock_value_details($dbcon,$start_date);
+        $closing_stock_value_details = closing_stock_value_details($closing_stock);
+    }
+				
+    $str = '';
+    $str.='<table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >
+            <tr>
+                <td colspan="4" style="font-size:20px;border-top:1px #101010 solid;border-left:1px #101010 solid;border-right:1px #101010 solid;border-bottom:1px #101010 solid;color:#251919;">
+                    <center>
+                            <strong>Profit And Loss</strong>
+                    </center>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;">
+                        <center><strong>'.$companyName.'</strong></center>
+                </td>
+                <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;">
+                        <center><strong>'.$companyName.'</strong></center>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size:15px;border-bottom:1px #101010 solid;border-left:1px #101010 solid;color:#251919;">
+                        <strong>Particulars</strong>
+                </td>
+                <td style="font-size:15px;border-right:1px #101010 solid;border-bottom:1px #101010 solid;color:#251919;">
+                        <center>'.$companyName.'</center>
+                </td>
+                <td style="font-size:15px;border-left:1px #101010 solid;border-bottom:1px #101010 solid;color:#251919;">
+                        <strong>Particulars</strong>
+                </td>
+                <td style="font-size:15px;border-right:1px #101010 solid;border-bottom:1px #101010 solid;color:#251919;">
+                        <center>'.$companyName.'</center>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;vertical-align: top;">
+                    <table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >
+                        <tr>
+                            <td><strong>Opening Stock</strong></td>
+                            <td style="text-align: right;">'.number_format((float)$opening_stock_value, 2, '.', '').'</td>
+                        </tr>
+                        <tr class="descripc">
+                            <td colspan="2">'.$opening_stock_value_details.'</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Purchase A/C.</strong></td>
+                            <td style="text-align: right;">'.number_format((float)$purchase_ac_value, 2, '.', '').'</td>
+                        </tr>
+                        <tr class="descripc">
+                            <td colspan="2">'.$purchase_ac_value_details.'</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Direct Expense</strong></td>
+                            <td style="text-align: right;">'.number_format((float)$direct_expance_value, 2, '.', '').'</td>
+                        </tr>
+                        <tr class="descripc">
+                            <td colspan="2">
+                                    '.$direct_expance_value_details.'
+                            </td>
+                        </tr>';
+                        if(!empty($gross_profit) && $gross_profit!="0.00"){
+                                $str.='<tr>
+                                                <td ><strong>Gross Profit<strong></td>
+                                                <td style="text-align: right;">'.$gross_profit.'</td>
+                                        </tr>';
+                        }else{
+                                $str.='<tr height="20px">
+                                                <td></td>
+                                                <td style="text-align: right;"></td>
+                                        </tr>';
+                        }
+                $str.='</table>
+                </td>
+                <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;vertical-align: top;">
+                    <table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >
+                        <tr>
+                                <td><strong>Sales A/C<strong></td>
+                                <td style="text-align: right;">'.number_format((float)$sales_ac_value, 2, '.', '').'</td>
+                        </tr>
+                        <tr class="descripc">
+                                <td colspan="2">'.$sales_ac_value_details.'</td>
+                        </tr>
+                        <tr>
+                                <td><strong>Direct Income<strong></td>
+                                <td style="text-align: right;">'.number_format((float)$direct_income_value, 2, '.', '').'</td>
+                        </tr>
+                        <tr class="descripc">
+                                <td colspan="2" >
+                                        '.$direct_income_value_details.'
+                                </td>
+                        </tr>
+                        <tr>
+                                <td><strong>Closing Stock<strong></td>
+                                <td style="text-align: right;">'.$closing_stock.'</td>
+                        </tr>
+                        <tr class="descripc">
+                                <td colspan="2">
+                                        '.$closing_stock_value_details.'
+                                </td>
+                        </tr>';
+                        if(!empty($gross_loss) && $gross_loss!="0.00"){
+                                $str.='<tr>
+                                            <td><strong>Gross Loss<strong></td>
+                                            <td style="text-align: right;">'.$gross_loss.'</td>
+                                        </tr>';
+                        }else{
+                                $str.='<tr height="20px">
+                                            <td></td>
+                                            <td style="text-align: right;"></td>
+                                        </tr>';
+                        }
+                $str.='</table>
+                </td>
+            </tr>';
+            $str .= '<tr>
+                        <td style="border-left: 1px #101010 solid;"></td>
+                        <td style="text-align: right;border-bottom: 2px  #101010 solid;border-top: 2px #101010 solid;color: #101010;">'.$total_exp.'</td>
+                        <td style="border-left: 1px #101010 solid;border-left: 1px #101010 solid;"></td>
+                        <td style="text-align: right;border-bottom: 2px  #101010 solid;border-top: 2px #101010 solid;border-right: 1px  #101010 solid;color: #101010;">'.$total_income.'</td>
+                    </tr>';
+            $str.='<tr>	
+                    <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;vertical-align: top;">
+                        <table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >';
+                            if(!empty($gross_loss) && $gross_loss!="0.00"){
+                                $str.='<tr>
+                                            <td><strong>Gross Loss<strong></td>
+                                            <td style="text-align: right;">'.$gross_loss.'</td>
+                                        </tr>';
+                            }
+                            $str.='<tr>
+                                        <td><strong>Indirect Expense<strong></td>
+                                        <td style="text-align: right;">'.$indirect_expances_value.'</td>
+                                    </tr>
+                                    <tr class="descripc">
+                                            <td colspan="2">'.$indirect_expense_value_details.'</td>
+                                    </tr>';
+								
+                            if(!empty($net_profit) && $net_profit!="0.00"){
+                                $str.='
+                                <tr height="20px">
+                                        <td></td>
+                                        <td style="text-align: right;"></td>
+                                </tr>
+                                <tr>
+                                        <td><strong>Net Profit<strong></td>
+                                        <td style="text-align: right;">'.$net_profit.'</td>
+                                </tr>';
+
+                            } else {
+                            $str.=' <tr height="20px">
+                                        <td></td>
+                                        <td style="text-align: right;"></td>
+                                    </tr>
+                                    <tr height="20px">
+                                        <td></td>
+                                        <td style="text-align: right;"></td>
+                                    </tr>';
+                            }
+                    $str.=' </table>
+                    </td>
+                    <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;vertical-align: top;">
+                        <table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >';
+                            if(!empty($gross_profit) && $gross_profit!="0.00"){
+                                $str.='<tr>
+                                            <td><strong>Gross Profit<strong></td>
+                                            <td style="text-align: right;">'.$gross_profit.'</td>
+                                        </tr>';
+                            }else{
+                                $str.='<tr height="20px">
+                                            <td></td>
+                                            <td style="text-align: right;"></td>
+                                        </tr>';
+                            }
+                            $str.='<tr>
+                                    <td><strong>Indirect Income<strong></td>
+                                    <td style="text-align: right;">'.$indirect_income_value.'</td>
+                            </tr>
+                            <tr class="descripc">
+                                    <td colspan="2">'.$indirect_income_value_details.'</td>
+                            </tr>';
+                            if(!empty($net_loss) && $net_loss!="0.00"){
+                                $str.='<tr height="20px">
+                                            <td></td>
+                                            <td style="text-align: right;"></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Net Loss<strong></td>
+                                            <td style="text-align: right;">'.$net_loss.'</td>
+                                        </tr>';
+                            }else{
+                                $str.='<tr height="20px">
+                                            <td></td>
+                                            <td style="text-align: right;"></td>
+                                        </tr>
+                                        <tr height="20px">
+                                                <td></td>
+                                                <td style="text-align: right;"></td>
+                                        </tr>';
+                            }
+                        $str.='</table>
+                    </td>
+                </tr>';
+            $str.='<tr height="20px">
+                        <td style="border-top: 1px #101010 solid;border-bottom: 1px  #101010 solid;border-left: 1px #101010 solid;color: #101010;">Total</td>
+                        <td style="text-align: right;border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-right: 1px #101010 solid;color: #101010;">'.$gtotal_exp.'</td>
+                        <td style="border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-left: 1px #101010 solid;color: #101010;">Total</td>
+                        <td style="text-align: right;border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-right: 1px #101010 solid;color: #101010;">'.$gtotal_profit.'</td>
+                    </tr>';
+        $str.='</table>';
+    echo $str;
+}
+?>

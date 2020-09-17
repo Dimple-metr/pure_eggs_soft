@@ -1,0 +1,72 @@
+<ifModule mod_headers.c>
+	# YEAR
+	<filesMatch ".(ico|gif|jpg|jpeg|png|flv|pdf)$">
+	  Header set Cache-Control "max-age=29030400"
+	</filesMatch>
+	# WEEK
+	<filesMatch ".(js|css|swf)$">
+	  Header set Cache-Control "max-age=604800"
+	</filesMatch>
+	# 45 MIN
+	<filesMatch ".(html|htm|txt|php)$">
+	  Header set Cache-Control "max-age=2700"
+	</filesMatch>
+</ifModule>
+<ifModule mod_gzip.c>
+mod_gzip_on Yes
+mod_gzip_dechunk Yes
+mod_gzip_item_include file .(html?|txt|css|js|php|pl)$
+mod_gzip_item_include handler ^cgi-script$
+mod_gzip_item_include mime ^text/.*
+mod_gzip_item_include mime ^application/x-javascript.*
+mod_gzip_item_exclude mime ^image/.*
+mod_gzip_item_exclude rspheader ^Content-Encoding:.*gzip.*
+</ifModule>
+<ifmodule mod_deflate.c>
+#AddOutputFilterByType DEFLATE text/text text/html text/plain text/xml text/x-javascript application/javascript
+</ifmodule>
+<IfModule mod_rewrite.c>
+	RewriteEngine on
+	#RewriteCond %{HTTP_HOST} !^www\.(.*)$ [NC]
+	#RewriteRule ^(.*)$ http://www.%{HTTP_HOST}/beta/$1 [R=301,L]
+	Options -Indexes +FollowSymLinks -MultiViews
+	 
+	RewriteRule ^pos-print/([^/]*)$ pos-print.php?id=$1 [L] 
+	RewriteRule ^response/([^/]*)$ response.php?id=$1 [L] 
+	RewriteRule ^branchedit/([^/]*)$ branch_add.php?id=$1 [L] 
+	RewriteRule ^inquiry_view/([^/]*)$ inquiry_view.php?id=$1 [L] 
+	RewriteRule ^receipt_purchase/([^/]*)$ receipt_purchase.php?id=$1 [L] 
+	RewriteRule ^receipt_sales/([^/]*)$ receipt_sales.php?id=$1 [L] 
+	RewriteRule ^clone_inquiry_add/([^/]*)$ inquiry_add.php?id=$1 [L]
+	RewriteRule ^inquiry_edit/([^/]*)$ inquiry_add.php?id=$1 [L]
+	RewriteRule ^useredit/([^/]*)$ useradd.php?id=$1 [L] 
+	RewriteRule ^changepassword/([^/]*)$ changepassword.php?id=$1 [L]
+	RewriteRule ^product_view/([^/]*)$ product_view.php?id=$1 [L]
+	RewriteRule ^customer_view/([^/]*)$ customer_view.php?id=$1 [L]
+	RewriteRule ^setting/([^/]*)$ setting.php?id=$1 [L]
+	RewriteRule ^product_edit/([^/]*)$ product_add.php?id=$1 [L] 
+	RewriteRule ^customer_edit/([^/]*)$ customer.php?id=$1 [L]
+	RewriteRule ^company_pref/([^/]*)$ company_pref.php?id=$1 [L]
+	RewriteRule ^ledger_edit/([^/]*)$ ledger_create.php?id=$1 [L]
+	RewriteRule ^upload_document/([^/]*)$ upload_document.php?id=$1 [L]
+	RewriteRule ^invoiceedit/([^/]*)$ invoice.php?id=$1 [L]
+	RewriteRule ^invoicereceipt/([^/]*)/([0-9]+)$ invoicereceipt.php?id=$1&printstatus=$2 [L]
+	RewriteRule ^invoicereceipt/([^/]*)$ invoicereceipt.php?id=$1 [L]
+	RewriteRule ^purchaseedit/([^/]*)$ purchase_add.php?id=$1 [L]
+	RewriteRule ^stock_out_edit/([^/]*)$ stock_out.php?id=$1 [L]
+	RewriteRule ^stock_in_edit/([^/]*)$ stock_in.php?id=$1 [L]
+	RewriteRule ^journal_entry_edit/([^/]*)$ journal_entry.php?id=$1 [L]
+	RewriteRule ^contra_entry_edit/([^/]*)$ contra_entry.php?id=$1 [L]
+	RewriteRule ^purchase_view/([^/]*)$ purchase_view.php?id=$1 [L]
+	
+	
+	RewriteRule ^companyedit/([^/]*)$ create_company.php?id=$1 [L]
+	
+	RewriteRule ^quotation_template2_print/([^/]*)$ quotation_template2_print.php?id=$1 [L]
+	RewriteRule ^quotation_print/([^/]*)$ quotation_print.php?id=$1 [L]
+	RewriteRule ^quotation_pdf_print/([^/]*)$ quotation_pdf_print.php?&type=$1 [L]
+	RewriteRule ^backup/([^/]*)$ backup.php?flag=$1 [L]
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteCond %{REQUEST_FILENAME}\.php -f
+	RewriteRule ^(.*)$ $1.php
+</ifModule>

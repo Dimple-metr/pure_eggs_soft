@@ -1,0 +1,12 @@
+[29-Aug-2020 08:56:06 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/config/session.php on line 24
+[29-Aug-2020 08:56:06 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/config/session.php on line 24
+[29-Aug-2020 08:56:06 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 39
+[29-Aug-2020 08:56:06 Asia/Kolkata] PHP Warning:  mysqli_fetch_all() expects parameter 1 to be mysqli_result, boolean given in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 44
+[29-Aug-2020 08:56:06 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 39
+[29-Aug-2020 08:56:06 Asia/Kolkata] PHP Warning:  mysqli_fetch_all() expects parameter 1 to be mysqli_result, boolean given in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 44
+[01-Sep-2020 16:40:34 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/config/session.php on line 24
+[01-Sep-2020 16:40:34 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 39
+[01-Sep-2020 16:40:34 Asia/Kolkata] PHP Warning:  mysqli_fetch_all() expects parameter 1 to be mysqli_result, boolean given in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 44
+[01-Sep-2020 16:40:34 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/config/session.php on line 24
+[01-Sep-2020 16:40:34 Asia/Kolkata] PHP Notice:  Undefined index: company_id in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 39
+[01-Sep-2020 16:40:34 Asia/Kolkata] PHP Warning:  mysqli_fetch_all() expects parameter 1 to be mysqli_result, boolean given in /home/bigdatasuite/public_html/pureeggs.com/pure_eggs_soft/app/employee_payment_report/index.php on line 44
