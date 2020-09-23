@@ -74,7 +74,7 @@
                                                         <label class="control-label col-lg-4 col-md-4 col-xs-4 respad-l0" style="white-space: nowrap;">Customer</label>
                                                         <div class=" col-lg-8 col-md-8 col-xs-8 respad-r0">
                                                             <select class="select2" name="customer_id" id="customer_id" title="Select Customer" onchange="reload_data();">
-                                                                <?=get_ledger($dbcon,'');?>
+                                                                <?=get_ledger($dbcon,'','AND l_group IN (37,38)');?>
                                                             </select>
                                                         </div>
                                                     </div>

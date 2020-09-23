@@ -22,29 +22,27 @@ if(strtolower($POST['mode']) == "pending_invoice_report") {
 		
     $condition = '';
     if(!empty($POST['customer_id'])){
-            $inv_condition = " AND inv.cust_id=".$POST['customer_id'];
-            $vedor_condition = " AND vender_id=".$POST['customer_id'];
+        $customer_name = $dbcon->query("Select l_name as customer_name from tbl_ledger WHERE l_id =".$POST['customer_id'])->fetch_object()->customer_name;
     }
     //echo $condition;
-    $query='Select * from (
-            (select "Purchase" as type,2 as ref_type,po_date as ref_date,po_no as ref_no,po_id as ref_id,g_total as ref_amount,(select IFNULL(sum(total_amount),0) as qty from  tbl_receipt_trn as trn where status=0 and po.po_id=trn.purchase_id) as pay_amount,po.cdate from  tbl_pono as po where status=0 '.$vedor_condition.' and po.g_total>(select IFNULL(sum(total_amount),0) as qty from  tbl_receipt_trn as trn where status=0 and po.po_id=trn.purchase_id)) 
-
-
-            union (select "excess" as type,2 as ref_type,rep.receipt_date as ref_date,rep.receipt_no as ref_no,excess_id as ref_id,excess_amount as ref_amount,(select IFNULL(sum(total_amount),0) as qty from  tbl_receipt_trn as trn where status=0 and payment_type=2 and inv.excess_id=trn.excess_id) as pay_amount,inv.cdate  from tbl_excess as inv 
-            left join tbl_receipt as rep on rep.receipt_id=inv.receipt_id
-            where inv.status=0 and excess_type=1 '.$inv_condition.' and inv.excess_amount>(select IFNULL(sum(total_amount),0) as qty from  tbl_receipt_trn as trn where status=0 and payment_type=2 and inv.excess_id=trn.excess_id))
-
-
-            ) as data order by ref_date,ref_type DESC';
+    $query='Select * from ( (select "Invoice" as type,1 as ref_type,invoice_date as ref_date,invoice_no as ref_no,
+        invoice_id as ref_id,g_total as ref_amount, 
+        (select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and inv.invoice_id=trn.invoice_id) as pay_amount, 
+        inv.cdate from tbl_invoice as inv where invoice_status=0 AND cust_id='.$POST['customer_id'].' 
+        and inv.g_total>(select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and inv.invoice_id=trn.invoice_id)) ) as data order by ref_date,ref_type DESC';
 
     $result = mysqli_query($dbcon,$query);
     $pending_invoices = mysqli_fetch_all($result,MYSQLI_ASSOC);
-    //echo '<pre>'; print_r($pending_invoice); exit;
+    //echo '<pre>'; print_r($pending_invoices); exit;
     
     $str="";
     $str.='<table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >';
     $str.='<tr>
-                <th class="text-center stop sbottom sleft sright titc" width="20%" >Ref No</th>
+                <th colspan="3" class="text-center stop sbottom sleft sright titc" width="20%" >'.$customer_name.'</th>
+                <th colspan="2" class="text-center stop sbottom sleft sright titc" width="20%" >Date : '.date('d-m-Y').'</th>
+        </tr>';
+    $str.='<tr>
+                <th class="text-center stop sbottom sleft sright titc" width="20%" >Invoice No</th>
                 <th class="text-center stop sbottom sleft sright titc"width="20%" > Invoice Date</th>
                 <th class="text-center stop sbottom sleft sright titc" width="20%" >Amount</th>
                 <th class="text-center stop sbottom sleft sright titc" width="20%" >Paid Amount</th>
