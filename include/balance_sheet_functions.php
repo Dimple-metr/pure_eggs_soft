@@ -14,15 +14,17 @@ function get_company_name($dbcon){
  *  Assets Function - to fetch values 
  */
 function get_fixed_assets($dbcon, $where_date){
-    $fa_query = "SELECT gb.ledger_id,led.l_name,gb.amount as amount
+    $fa_query = "SELECT gb.ledger_id,led.l_name,sum(gb.amount) as amount
         FROM `tbl_general_book` gb 
         LEFT join tbl_ledger as led ON led.l_id= gb.ledger_id 
         LEFT join tbl_group as gro ON gro.g_id=led.l_group 
-        WHERE led.l_status = ".ACTIVE." 
+        WHERE led.l_status = ".ACTIVE."
+            AND gb.entry_type = ".DEBIT."
             AND gb.genral_book_status = ".ACTIVE."
             AND gb.ref_date ".$where_date."
             AND led.`l_group` = ".FIXED_ASSETS."
-            AND led.company_id = ".$_SESSION['company_id'];
+            AND led.company_id = ".$_SESSION['company_id']."
+        GROUP BY gb.ledger_id";
     $fa_entries_res = $dbcon->query($fa_query);
     
     $fixed_assets_value = 0;
@@ -559,7 +561,7 @@ function get_current_liabilities($dbcon, $where_date){
                 WHERE pro.l_status != ".DELETED." 
                 AND company_id = 1 ";
         } else { */
-            $cl_qry = "SELECT gro.g_name as group_name,sum(gb.amount) as cl_value
+            /*$cl_qry = "SELECT gro.g_name as group_name,sum(gb.amount) as cl_value
                 FROM tbl_general_book gb 
                 LEFT join tbl_ledger as led ON led.l_id= gb.ledger_id 
                 LEFT join tbl_group as gro ON gro.g_id=led.l_group 
@@ -569,6 +571,19 @@ function get_current_liabilities($dbcon, $where_date){
                     AND l_group IN (".$sub_group_id.") 
                     and gb.entry_type = ".CREDIT."  
                     AND gb.ref_date ".$where_date."
+                    AND gb.genral_book_status = ".ACTIVE;*/
+            $cl_qry = "SELECT gro.g_name as group_name,sum(gb.amount) as cl_value
+                FROM tbl_general_book gb 
+                LEFT JOIN tbl_receipt as cert ON cert.receipt_id = gb.table_id
+                LEFT join tbl_ledger as led ON led.l_id = gb.ledger_id 
+                LEFT join tbl_group as gro ON gro.g_id =led.l_group 
+                WHERE led.l_status = ".ACTIVE."
+                    AND led.company_id = ".$_SESSION['company_id']." 
+                    AND gro.g_pid = ".CURRENT_LIABILITIES." 
+                    AND l_group IN (".$sub_group_id.") 
+                    and gb.entry_type = ".CREDIT."  
+                    AND payment_type = 2					
+                    AND cert.receipt_date ".$where_date."
                     AND gb.genral_book_status = ".ACTIVE;
         }
         $cl_res = mysqli_query($dbcon,$cl_qry);

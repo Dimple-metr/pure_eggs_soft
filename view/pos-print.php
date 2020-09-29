@@ -407,7 +407,14 @@
 									
 								</td>
 							</tr>
-
+                                                        <tr>
+								<td colspan="5" style="text-align:left;white-space:nowrap;">
+								<strong>CERTIFICATE OF WARRANTY : </strong>We hereby certify that<br/>
+                                                                foods mentioned in this Bill of Supply is<br/> 
+                                                                warranted to be of the nature & quality which <br/>
+                                                                it purpose to be.
+								</td>
+							</tr>
 							<tr>
 								<td colspan="5" style="text-align:center;padding-top: 15px;">
 									<strong>***Thank you***</strong>

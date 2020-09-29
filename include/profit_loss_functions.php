@@ -92,20 +92,9 @@ function sales_ac_value_details($dbcon,$where_date) {
      */
     
         // updated by Dimple Panchal
-        $qry1 = "SELECT GROUP_CONCAT(sales_ids.l_id) as leger_id1 from 
-            (SELECT led.l_id from tbl_invoicetrn as cert 
-                LEFT join tbl_product as pro on pro.product_id = cert.product_id
-                LEFT join tbl_invoice as po on po.invoice_id = cert.invoice_id
-                LEFT join tbl_ledger as led on led.l_id = po.sales_ledger_id
-                LEFT join tbl_group as gro on gro.g_id = led.l_group
-                WHERE trancation_status = ".ACTIVE." 
-                    AND gro.g_id = ".SALES_ACCOUNTS."
-                    AND po.invoice_date ".$where_date." 
-                    AND pro.product_type != ".CHARGES."
-                GROUP BY led.l_id 
-                ORDER BY led.l_id) as sales_ids";
-//        echo '<br/>'.$qry1;
-        $led_id = $dbcon->query($qry1)->fetch_object()->leger_id1;
+        $sales_ledger_ids = $dbcon->query("SELECT GROUP_CONCAT(l_id) as sales_ids FROM `tbl_ledger` 
+            WHERE `l_group` = ".SALES_ACCOUNTS." AND l_status = ".ACTIVE." AND company_id=".$_SESSION['company_id'])
+                ->fetch_object()->sales_ids;
         
 //        $array1= array();
 //	if(!empty($re['leger_id1'])){
@@ -119,17 +108,19 @@ function sales_ac_value_details($dbcon,$where_date) {
                     FROM tbl_general_book as cgen
                     LEFT JOIN tbl_invoicetrn as cert ON cert.invoice_id = cgen.table_id
                     LEFT JOIN tbl_product as pro ON pro.product_id = cert.product_id
-                    LEFT JOIN tbl_invoice as po ON po.invoice_id=cert.invoice_id
-                    LEFT JOIN tbl_ledger as led ON led.l_id=po.sales_ledger_id
-                    LEFT JOIN tbl_group as gro ON gro.g_id=led.l_group
+                    LEFT JOIN tbl_invoice as po ON po.invoice_id = cert.invoice_id
+                    LEFT JOIN tbl_ledger as led ON led.l_id = po.sales_ledger_id
+                    LEFT JOIN tbl_group as gro ON gro.g_id = led.l_group
                     WHERE trancation_status = ".ACTIVE." 
                         AND gro.g_id = ".SALES_ACCOUNTS." 
                         AND po.invoice_date ".$where_date." 
-                        AND pro.product_type != ".CHARGES." 
+                        AND pro.product_type != ".CHARGES."
+                        AND cgen.entry_type = ".DEBIT."
+                        AND po.sales_ledger_id in (".$sales_ledger_ids.")
                         GROUP BY led.l_id 
                         ORDER BY led.l_id) as genbook ON genbook.l_id=pro.l_id
                 WHERE pro.l_status != ".DELETED." 
-                    AND pro.l_id in (".$led_id.") 
+                    AND pro.l_id in (".$sales_ledger_ids.") 
                     AND company_id=".$_SESSION['company_id']." 
                 GROUP BY pro.l_id 
                 ORDER BY l_name";
