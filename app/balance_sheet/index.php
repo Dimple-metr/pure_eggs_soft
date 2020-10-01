@@ -46,7 +46,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     $capital_account_entries = $loans_entries = $current_liabilities_entries = $suspence_account_entries = '';
     
     $total_assets = $fixed_assets['value'] + $current_assets['value'] + $investments_value + $misc_expense_value;
-    $total_liability = $capital_account['value'] + $loans_value + $current_liabilities['value'] + $suspence_account_value;
+    $total_liability = $capital_account['value'] + $loans_liability['value'] + $current_liabilities['value'] + $suspence_account_value;
     
     $total_assets = number_format((float)$total_assets, 2, '.', '');
     $total_liability = number_format((float)$total_liability, 2, '.', '');
@@ -135,7 +135,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         </tr>
                         <tr style="height: 10px;"><td colspan="2"></td></tr>';
                         
-                    /*if($total_assets > $total_liability){
+                    if($total_assets > $total_liability){
                         $grand_total = $total_assets;
                         $pl_value = $total_assets - $total_liability;
                         $str .= '<tr>
@@ -143,7 +143,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                                 <td style="text-align: right;">'.number_format((float)$pl_value, 2, '.', '').'</td>
                         </tr>
                         ';
-                    }*/
+                    }
                 $str .= '<tr style="display:none;" class="net_profit"></tr>
                         <tr height="20px">
                                 <td></td>
