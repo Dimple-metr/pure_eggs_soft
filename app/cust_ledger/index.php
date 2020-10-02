@@ -90,7 +90,11 @@ include_once("../../include/common_functions.php");
 					</tr>';
 		
 			$qry='select * from tbl_general_book as payment
-				where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' and ref_date>="'.date('Y-m-d',strtotime($s_date[0])).'" and ref_date<="'.date('Y-m-d',strtotime($s_date[1])).'" and table_name!="tbl_ledger" and payment.ledger_id='.$POST['cust_id'].' ORDER BY payment.ref_date';
+				where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
+                                    and ref_date>="'.date('Y-m-d',strtotime($s_date[0])).'" 
+                                    and ref_date<="'.date('Y-m-d',strtotime($s_date[1])).'" 
+                                    and table_name!="tbl_ledger" and payment.ledger_id='.$POST['cust_id'].' 
+                                ORDER BY payment.ref_date';
 			$result1=$dbcon->query($qry);
 			$i=1;
 				

@@ -112,20 +112,22 @@ function get_current_assets($dbcon, $where_date){
                         group by rec.ledger_id) as creditcust on creditcust.ledger_id=cust.l_id 
                 where l_status = 0 AND company_id = 1 AND l_group IN (".$sub_group_id.")
                     AND cust.l_id IN (".$sub_ledger.")";
-        }
-        $result = mysqli_query($dbcon, $ca_qry);
-        $ca_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+        
+                $result = mysqli_query($dbcon, $ca_qry);
+                $ca_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
 
-        //echo '<pre>';        print_r($ca_result);
-        if($ca_result){
-            foreach ($ca_result as $value) {
-                $op_balance = ($value['balance_typeid']=="2" ? ($value['opening_balance']) :-$value['opening_balance']);
-		$balance = $op_balance + ($value['debitamount']-$value['creditamount']);
-                
-                $ca_value['group_name'] = $value['group_name'];
-                $ca_value['ca_value'] = abs($balance);
-                array_push($ca_entries, $ca_value);
-            }
+                //echo '<pre>';        print_r($ca_result);
+                if($ca_result){
+                    foreach ($ca_result as $value) {
+                        $balance_type = ($sub_group_id == SUNDRY_DEBTORS) ? '2' : $value['balance_typeid'];
+                        $op_balance = ($balance_type=="2" ? ($value['opening_balance']) :-$value['opening_balance']);
+                        $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
+
+                        $ca_value['group_name'] = $value['group_name'];
+                        $ca_value['ca_value'] = abs($balance);
+                        array_push($ca_entries, $ca_value);
+                    }
+                }
         }
     }
     $ca_value = 0;
