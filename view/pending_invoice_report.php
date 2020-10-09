@@ -5,6 +5,8 @@
 	include_once("../config/session.php");
 	include_once("../include/common_functions.php");
 	$form="Pending Invoice Report";
+        $start_date = date('01-m-Y');
+        $end_date = date('t-m-Y');
 ?>
 
 <!DOCTYPE html>
@@ -68,6 +70,22 @@
                                     <form class="form-horizontal" role="form" id="po_add" action="javascript:;" method="post" name="po_add">
                                         <div class="row">
                                             <div class="col-md-12"  style="margin-top:10px;" >
+                                                <div class='col-md-4'>
+                                                    <div class="form-group">
+                                                        <label class="control-label col-lg-4 col-md-4 col-xs-4 respad-l0" style="white-space: nowrap;">Start Date</label>
+                                                        <div class=" col-lg-8 col-md-8 col-xs-8 respad-r0">
+                                                            <input id="start_date" name="start_date" type="text" class="form-control default-date-picker reuired valid" title="Date" value="<?=$start_date?>" placeholder="Start Date" onChange="reload_data();">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class='col-md-4'>
+                                                    <div class="form-group">
+                                                        <label class="control-label col-lg-4 col-md-4 col-xs-4 respad-l0" style="white-space: nowrap;">End Date</label>
+                                                        <div class=" col-lg-8 col-md-8 col-xs-8 respad-r0">
+                                                            <input id="end_date" name="end_date" type="text" class="form-control default-date-picker reuired valid" title="Date" value="<?=$end_date?>" placeholder="End Date" onChange="reload_data();">
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <? if($_SESSION['user_type']==2){ ?>
                                                 <div class='col-md-4'>
                                                     <div class="form-group">
@@ -83,6 +101,7 @@
                                                         <input type="hidden" name="customer_id" id="customer_id" value="<?=$_SESSION['user_id']?>" />
                                                 <? } ?>
                                         </div>
+                                            <div class="clearfix"></div>
                                                 <div class="col-md-12" style="overflow-x: auto;width:100%;min-height: 70px;">
                                                         <div id="profitloss_report_id" ></div>
                                                 </div>
@@ -100,6 +119,10 @@
 			<script src="<?=ROOT?>js/app/pending_invoice_report.js"></script>
 			<script>
                             //$('#container').addClass('sidebar-closed');
+                            $('.default-date-picker').datepicker({
+                                format: 'dd-mm-yyyy',
+                                autoclose: true
+                            });
                             $(".select2").select2({
                                 width: '100%'
                             });

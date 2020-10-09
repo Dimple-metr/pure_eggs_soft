@@ -8,6 +8,8 @@ include("../../config/session.php");
 include("../../include/function_database_query.php");
 //include_once("../../include/profit_loss_functions.php");
 include_once("../../include/common_functions.php");
+$start_date = date('01-m-Y');
+$end_date = date('t-m-Y');
 
 if($_POST != NULL) {
 	$POST = bulk_filter($dbcon,$_POST);
@@ -24,11 +26,14 @@ if(strtolower($POST['mode']) == "pending_invoice_report") {
     if(!empty($POST['customer_id'])){
         $customer_name = $dbcon->query("Select l_name as customer_name from tbl_ledger WHERE l_id =".$POST['customer_id'])->fetch_object()->customer_name;
     }
+    $start_date = date('Y-m-d',strtotime($_POST['start_date']));
+    $end_date = date('Y-m-d',strtotime($_POST['end_date']));
+    $where_date = (isset($end_date) && !empty($end_date)) ? " between '".$start_date."' and '".$end_date."'" : " < '".date('Y-m-d')."'" ;
     //echo $condition;
     $query='Select * from ( (select "Invoice" as type,1 as ref_type,invoice_date as ref_date,invoice_no as ref_no,
         invoice_id as ref_id,g_total as ref_amount, 
         (select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and inv.invoice_id=trn.invoice_id) as pay_amount, 
-        inv.cdate from tbl_invoice as inv where invoice_status=0 AND cust_id='.$POST['customer_id'].' 
+        inv.cdate from tbl_invoice as inv where inv.cdate '.$where_date.' and invoice_status=0 AND cust_id='.$POST['customer_id'].' 
         and inv.g_total>(select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and inv.invoice_id=trn.invoice_id)) ) as data order by ref_date,ref_type DESC';
 
     $result = mysqli_query($dbcon,$query);
@@ -39,7 +44,7 @@ if(strtolower($POST['mode']) == "pending_invoice_report") {
     $str.='<table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >';
     $str.='<tr>
                 <th colspan="3" class="text-center stop sbottom sleft sright titc" width="20%" >'.$customer_name.'</th>
-                <th colspan="2" class="text-center stop sbottom sleft sright titc" width="20%" >Date : '.date('d-m-Y').'</th>
+                <th colspan="2" class="text-center stop sbottom sleft sright titc" width="20%" >Date : '.date('d-m-Y', strtotime($start_date)).' To '.date('d-m-Y', strtotime($end_date)).'</th>
         </tr>';
     $str.='<tr>
                 <th class="text-center stop sbottom sleft sright titc" width="20%" >Invoice No</th>
