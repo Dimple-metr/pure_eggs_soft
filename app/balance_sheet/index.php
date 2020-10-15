@@ -28,7 +28,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     
     //Assets variables
     $fixed_assets = get_fixed_assets($dbcon, $where_date);
-    $current_assets = get_current_assets($dbcon, $where_date);
+    $current_assets = get_current_assets($dbcon, $start_date, $end_date);
     $investments_value = get_investments_value($dbcon, $where_date);
     $misc_expense_value = get_misc_expense_value($dbcon, $where_date);
     //echo '<pre>';    print_r($current_assets); exit;
@@ -135,7 +135,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         </tr>
                         <tr style="height: 10px;"><td colspan="2"></td></tr>';
                         
-                    if($total_assets > $total_liability){
+                    /*if($total_assets > $total_liability){
                         $grand_total = $total_assets;
                         $pl_value = $total_assets - $total_liability;
                         $str .= '<tr>
@@ -143,7 +143,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                                 <td style="text-align: right;">'.number_format((float)$pl_value, 2, '.', '').'</td>
                         </tr>
                         ';
-                    }
+                    }*/
                 $str .= '<tr style="display:none;" class="net_profit"></tr>
                         <tr height="20px">
                                 <td></td>
