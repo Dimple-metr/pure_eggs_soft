@@ -11,9 +11,14 @@ $month = $_REQUEST['month'];
 $dates = get_financial_year();
 extract($dates);
 
+$year = date('Y');
+if(!in_array($month, array(1,2,3))){
+    $year = $year -1;
+}
+        
 $date = new DateTime($start_date);
-$start_date = $date->format('Y-'.$month.'-d');
-$end_date = $date->format('Y-'.$month.'-t');
+$start_date = $date->format($year.'-'.$month.'-d');
+$end_date = $date->format($year.'-'.$month.'-t');
 
 //$start_date = date('Y-'.$month.'-01');
 //$end_date = date('Y-'.$month.'-t');

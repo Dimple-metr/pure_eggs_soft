@@ -32,15 +32,17 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     $current_assets = get_current_assets($dbcon, $start_date, $end_date);
     $investments_value = get_investments_value($dbcon, $where_date);
     $misc_expense_value = get_misc_expense_value($dbcon, $where_date);
+    $suspence_account = get_suspence_account($dbcon, $where_date);
     //echo '<pre>';    print_r($current_assets); exit;
     
     // Liabilities Variables
     $capital_account = get_capital_account($dbcon, $start_date);
     $loans_liability = get_loans($dbcon, $where_date);
     $current_liabilities = get_current_liabilities($dbcon, $start_date, $end_date);
-    $suspence_account_value = get_suspence_account_value($dbcon, $start_date);
+    $suspence_account_value = $suspence_account['value'];
+    $suspence_account_entries = $suspence_account['entries'];
     
-    $capital_account_entries = $loans_entries = $current_liabilities_entries = $suspence_account_entries = '';
+    $capital_account_entries = $loans_entries = $current_liabilities_entries = '';
     
     $total_assets = $fixed_assets['value'] + $current_assets['value'] + $investments_value + $misc_expense_value;
     $total_liability = $capital_account['value'] + $loans_liability['value'] + $current_liabilities['value'] + $suspence_account_value;
@@ -171,7 +173,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         <tr style="height: 10px;"><td colspan="2"></td></tr>
                         <tr>
                                 <td><strong>Current Assets<strong></td>
-                                <td style="text-align: right;">'.number_format((float)$current_assets['value'], 2).'</td>
+                                <td style="text-align: right;">'.indian_number($current_assets['value'], 2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2">

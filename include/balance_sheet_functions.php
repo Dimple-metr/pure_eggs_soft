@@ -514,7 +514,7 @@ function get_suspence_account_value($dbcon, $where_date){
         WHERE journal_trn_status= ".ACTIVE."
             AND gro.g_id = ".SUSPENSE_ACCOUNTS."
             AND jrt.entry_type = ".CREDIT." 
-            AND jou.journal_date".$where_date;
+            AND jou.journal_date ".$where_date;
     $suspence_account_res = $dbcon->query($suspence_ac_qry);
     while($suspence_account_entry = mysqli_fetch_assoc($suspence_account_res)){
         $suspence_account_value = $suspence_account_entry["suspence_value"];
@@ -720,7 +720,7 @@ function get_current_liabilities_entries($dbcon, $where_date){
 }
 
 function get_suspence_account_entries($dbcon, $where_date){
-    $suspence_ac_qry = "SELECT SUM(cgen.amount) as suspence_value,led.l_name
+    $suspence_ac_qry = "SELECT SUM(cgen.amount) as suspence_value,led.l_name,led.l_id
         FROM tbl_general_book as cgen 
         LEFT JOIN tbl_journal_trn as jrt on jrt.journal_trn_id=cgen.table_id 
         LEFT JOIN tbl_journal as jou on jou.journal_id=jrt.journal_id 
@@ -740,8 +740,9 @@ function get_suspence_account_entries($dbcon, $where_date){
             if($amount && ($amount>0)){
                 $str.='
                     <tr>
-                        <td>'.$suspence_ac_entry["l_name"].'</td>
-                        <td>'.number_format((float)$amount, 2, '.', '').'</td>
+                        <!--<td>'.$suspence_ac_entry["l_name"].'</td>-->
+                        <td><a style="color: inherit;" href="ledger_monthly_view.php?ledger_id='.$suspence_ac_entry["l_id"].'" target="_blank">'.$suspence_ac_entry["l_name"].'</a></td>
+                        <td>'. indian_number($amount, 2, '.', '').'</td>
                     </tr>
                 ';
             }
@@ -750,5 +751,64 @@ function get_suspence_account_entries($dbcon, $where_date){
         $str .= "</table>";
     }
     return $str;
+}
+
+function get_suspence_account($dbcon, $where_date){
+    $sub_ledger_qry = "SELECT l_id,l_name FROM `tbl_ledger` WHERE l_status = ".ACTIVE." AND l_group IN (".SUSPENSE_ACCOUNTS.")";
+    $result = mysqli_query($dbcon, $sub_ledger_qry);
+    $sub_ledger_array = mysqli_fetch_all($result,MYSQLI_ASSOC);
+    
+    $balance = 0;
+    $suspence_entries = array();
+    foreach ($sub_ledger_array as $sub_ledger) {
+        $payment_qry = 'select sum(amount) as amount, entry_type 
+            from tbl_general_book as payment
+            where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
+                and ref_date '.$where_date.'
+                and table_name!="tbl_ledger" and payment.ledger_id IN ('.$sub_ledger['l_id'].') 
+            GROUP BY payment.entry_type
+            ORDER BY payment.ref_date
+            ';
+        $result = mysqli_query($dbcon, $payment_qry);
+        $payment_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+        
+        if($payment_result){
+            foreach ($payment_result as $payment) {
+                if($payment['entry_type'] == 2){
+                    $balance += $payment['amount'];
+
+                }else{
+                    $balance -= $payment['amount'];
+                }
+            }
+            
+        }
+        $suspence_value['ledger_id'] = $sub_ledger['l_id'];
+        $suspence_value['ledger_name'] = $sub_ledger['l_name'];
+        $suspence_value['amount'] = abs($balance);
+        array_push($suspence_entries, $suspence_value);
+    }
+    
+    $sa_value = 0;
+    if($suspence_entries){
+        $str.= '<table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >';
+        foreach ($suspence_entries as $suspence_ac) {
+            $amount = $suspence_ac["amount"];
+            if($amount && ($amount>0)){
+                $str.='
+                    <tr>
+                        <td><a style="color: inherit;" href="ledger_monthly_view.php?ledger_id='.$suspence_ac["ledger_id"].'" target="_blank">'.$suspence_ac["ledger_name"].'</a></td>
+                        <td>'. indian_number($amount, 2).'</td>
+                    </tr>
+                ';
+                $sa_value = $sa_value + $amount;
+            }
+        }
+        $str .= "</table>";
+    }
+    
+    $suspence_account['entries'] = $str;
+    $suspence_account['value'] = $sa_value;
+    return $suspence_account; 
 }
 
