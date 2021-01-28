@@ -40,8 +40,8 @@
 			  </div>	
              </div>
               <!--unit overview start-->
-			<?php include_once('../include/country_unit_city.php');?>
-		  <div class="row">
+                <?php include_once('../include/country_unit_city.php');?>
+                <div class="row">
 			<div class="col-sm-3">
 				<section class="panel">
 				  <header class="panel-heading">
@@ -49,12 +49,12 @@
 					</header>	
 					<div class="panel-body">
 						<form role="form" id="group_add" action="javascript:;" method="post" name="group_add">
-								<div class="form-group">
+                                                            <div class="form-group">
 								  <label>Sub Group Name</label>
 								 <input class="form-control" type='text' name='g_name' id='g_name' value='' />
 							    </div>
 								
-								<div class="form-group">
+                                                            <div class="form-group">
 								  <label>Select Group</label>
 								  <select class="select2" name="g_parent" id="g_parent" onchange="get_form_type(this.value,'g_form')">
 									<?=get_all_group($dbcon,$id);?>

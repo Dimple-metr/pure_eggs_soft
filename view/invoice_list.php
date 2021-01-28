@@ -6,6 +6,9 @@
 	$token = md5(rand(1000,9999));
 	$_SESSION['token'] = $token;
 	$form="Invoice List";
+        $infopage = pathinfo( __FILE__ );
+        //echo '<pre>';print_r($_SESSION);exit;
+        $_SESSION['page']='invoice_list';
 	if(empty($_SESSION['start']))
 	{
 		$start=date('d-m-Y');
@@ -103,6 +106,9 @@ padding-bottom:20px;
     right: 25px;
     top: 0px;
     z-index: 100;
+}
+span .number{
+    text-align: right;
 }
 </style>
 <style>
@@ -265,7 +271,13 @@ label.radio {
 				  </tr>
 				  </thead>
 				  <tbody>
-				  </tbody>				 
+				  </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="4" style="text-align:right">Total:</th>
+                                            <td colspan="3" style="text-align:left">0.00</th>
+                                        </tr>
+                                    </tfoot>
 				  </table>
 				  <style>
 				  @media screen and (max-width:992px){

@@ -264,7 +264,7 @@ function get_amount()
 				data: { mode : "load_tax_per",formulaid:formulaid},
 				success: function(resp){
 					
-							console.log(resp);
+							//console.log(resp);
 						/* if(resp!=""){
 						var total_amount=(parseFloat(total)*parseFloat(resp))/parseFloat(100);
 							$('#product_amount').val(total_amount);
@@ -417,7 +417,7 @@ function load_productdetail(val,i) {
 					{
 						//console.log(response);
 						
-						var obj =jQuery.parseJSON(response)
+						var obj =jQuery.parseJSON(response);
 						$('#product_des').val(obj.product_des);				
 						$('#product_hsn_code').val(obj.product_code);				
 						$('#product_rate').val(obj.product_mst_rate);
@@ -577,20 +577,28 @@ function load_datatable()
 			"oLanguage": {
 					"sLengthMenu": "_MENU_",
 					"sProcessing": "<img src='"+root_domain+"img/loading.gif'/> Loading ...",
-					"sEmptyTable": "NO DATA ADDED YET !",
+					"sEmptyTable": "NO DATA ADDED YET !"
 			},
-			"aLengthMenu": [[10, 20, 30, 50], [10, 20, 30, 50]],
-			"iDisplayLength": 10,
+			"aLengthMenu": [[-1, 10, 20, 30, 50], ["All",10, 20, 30, 50]],
+			"iDisplayLength": -1,
 			"sAjaxSource": root_domain+'app/invoice/',
 			"fnServerParams": function ( aoData ) {
 				aoData.push( { "name": "mode", "value": "fetch" },{ "name": "report", "value": data },{ "name": "type_id", "value": type },{ "name": "date", "value": date } );
 			},
-			"fnDrawCallback": function( oSettings ) {
+                        "fnDrawCallback": function( oSettings ) {
 				$('.ttip, [data-toggle="tooltip"]').tooltip();
-			}
-		}).fnSetFilteringDelay();
+			},
+                        "fnFooterCallback" : function(nFoot, aasData, iStart, iEnd, aiDispay) {
+                            var total = 0;
+                            for (var i = 0; i < aasData.length; i++) {
+                                total = parseFloat(total) + parseFloat(aasData[i][4]);
+                            }
+                            nFoot.getElementsByTagName('td')[1].innerHTML= total.toFixed(2);
+                        }
+                        
+                }).fnSetFilteringDelay();
 
-		//Search input style
+                //Search input style
 		$('.dataTables_filter input').addClass('form-control').attr('placeholder','Search');
 		$('.dataTables_length select').addClass('form-control');
 }

@@ -32,8 +32,8 @@ include_once("../../include/common_functions.php");
 							</td>
 						</tr>
 						<tr>
-							<td colspan="2"><strong>Ledger </strong></td>
-							<td colspan="2" style="text-align:center"><strong>	Name:'.$cust_rel['l_name'].'
+							<!--<td colspan="2"><strong>Ledger </strong></td>-->
+							<td colspan="4" style="text-align:center"><strong>	Name:'.$cust_rel['l_name'].'
 							</strong></td>
 							<td colspan="2" style="text-align:right">Date
 							<label>  : <strong>'.date('d/m/Y',strtotime($s_date[0])).'</strong> To <strong>'.date('d/m/Y',strtotime($s_date[1])).'</strong></label></td>
@@ -41,7 +41,8 @@ include_once("../../include/common_functions.php");
 						<tr>
 							<th width="5%" style="text-align:center">Sr. NO.</th>
 							<th width="12%" style="text-align:center">Date</th>
-							<th width="47%" style="text-align:center">Description</th>
+							<th width="25%" style="text-align:center">Description</th>
+                                                        <th width="25%" style="text-align:center">Ledger</th>
 							<th width="12%" style="text-align:center">Debit Amount</th>
 							<th width="12%" style="text-align:center">Credit Amount</th>
 							<th width="12%" style="text-align:center">Balance</th>
@@ -50,7 +51,9 @@ include_once("../../include/common_functions.php");
 		
 		 $query="select opn_balance as opening_balance,balance_typeid,debitamount,creditamount from tbl_ledger as cust 
 		left join 
-		(select sum(amount) as debitamount,invoice.ledger_id from tbl_general_book as invoice where genral_book_status=0 and table_name!='tbl_ledger' and entry_type=2 and invoice.company_id=".$_SESSION['company_id']." and ref_date < '".date('Y-m-d',strtotime($s_date[0]))."' group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
+		(select sum(amount) as debitamount,invoice.ledger_id 
+                from tbl_general_book as invoice 
+                where genral_book_status=0 and table_name!='tbl_ledger' and entry_type=2 and invoice.company_id=".$_SESSION['company_id']." and ref_date < '".date('Y-m-d',strtotime($s_date[0]))."' group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
 		
 		left join 
 		(select sum(amount) as creditamount,rec.ledger_id from tbl_general_book as rec 
@@ -61,12 +64,13 @@ include_once("../../include/common_functions.php");
 		
 		$rel=mysqli_fetch_assoc($dbcon->query($query));
 		$op_balance=($rel['balance_typeid']=="2"?($rel['opening_balance']):-$rel['opening_balance']);
-		 $balance=$op_balance+$rel['debitamount']-($rel['creditamount']);
-		 $balancetype='';
+		$balance=$op_balance+$rel['debitamount']-($rel['creditamount']);
+		$balancetype='';
 		$str .='<tr>
 					<td data-label="" style="text-align:center"></td>
 					<td data-label="DATE" style="text-align:center">'.date('d/m/Y',strtotime($s_date[0])).'</td> 
 					<td data-label="DESCRIPTION" style="text-align:center">Opening Balance</td>
+                                        <td data-label="LEDGER" style="text-align:center">- </td>
 					<td data-label="DEBIT AMOUNT" style="text-align:center">- </td>
 					<td data-label="CREDIT AMOUNT" style="text-align:center"> -</td>';
 					if($balance>0)
@@ -107,30 +111,42 @@ include_once("../../include/common_functions.php");
 						$str.='<tr>
 						  <td data-label="SR. NO." style="text-align:center">'.$i.'</td>
 							<td data-label="DATE" style="text-align:center">'.date('d/m/Y',strtotime($re["ref_date"])).'</td>';
-								$ref_no=load_led_no($dbcon,$re['table_name'],$re['table_id']);
+								$ref_no=load_ledger_detail($dbcon,$re['table_name'],$re['table_id'],$POST['cust_id']);
 								if($re['table_name']=="tbl_invoice")
 								{
-									
-									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.' Invoice No : '.$ref_no.'</td>';
+									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.' Invoice No : '.$ref_no['invoice_no'].'</td>';
+                                                                        $str .='<td data-label="LEDGER" style="text-align:center">'.$ref_no['ledger_name'].'</td>';
 								}
 								else if($re['table_name']=="tbl_purchase"){
-									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Purchace No : '.$ref_no.'</td>';
+									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Purchace No : '.$ref_no['po_no'].'</td>';
+                                                                        $str .='<td data-label="LEDGER" style="text-align:center">'.$ref_no['ledger_name'].'</td>';
 								}
 								else if($re['table_name']=="tbl_payment"){
+                                                                        if($ref_no['payment_mode_id'] == $POST['cust_id']){
+                                                                            $ledger_name = $dbcon->query("select l_name from tbl_ledger where l_id=".$ref_no['cust_id']." and company_id=".$_SESSION['company_id'])
+                                                                                ->fetch_object()->l_name;
+                                                                        } else {
+                                                                            $ledger_name = $dbcon->query("select l_name from tbl_ledger where l_id=".$ref_no['payment_mode_id']." and company_id=".$_SESSION['company_id'])
+                                                                                ->fetch_object()->l_name;
+                                                                        }
 									if($re['entry_type']=="1"){
-										$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Recipt No : '.$ref_no.'</td>';
+										$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Payment No : '.$ref_no['receipt_no'].'</td>';
 									}else{
-										$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Payment No : '.$ref_no.'</td>';
+										$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Recipt No : '.$ref_no['receipt_no'].'</td>';
 									}
+                                                                        $str .='<td data-label="LEDGER" style="text-align:center">'.$ledger_name.'</td>';
 								}
 								else if($re['table_name']=="tbl_journal_trn"){
-									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Journal No : '.$ref_no.'</td>';
+									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Journal No : '.$ref_no['journal_no'].'</td>';
+                                                                        $str .='<td data-label="LEDGER" style="text-align:center">'.$ref_no['ledger_name'].'</td>';
 								}
 								else if($re['table_name']=="tbl_contra_trn"){
-									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Contra No : '.$ref_no.'</td>';
+									$str .='<td data-label="DESCRIPTION" style="text-align:center">'.$demo.'Contra No : '.$ref_no['contra_no'].'</td>';
+                                                                        $str .='<td data-label="LEDGER" style="text-align:center">'.$ref_no['ledger_name'].'</td>';
 								}
 								else{
 									$str .='<td data-label="DESCRIPTION" style="text-align:center">-</td>';
+                                                                        $str .='<td data-label="LEDGER" style="text-align:center">-</td>';
 								}
 						
 						if($re['entry_type']==2){

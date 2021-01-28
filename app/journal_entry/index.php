@@ -28,7 +28,7 @@ else {
 			$i=1;
 			$aColumns = array('journal_id','journal_no','journal_date','remark','journal_status','po.cdate','po.user_id');
 			$sIndexColumn = "journal_id";
-			$isWhere = array("po.journal_status = 0".$where.check_user('po'));
+			$isWhere = array("po.journal_status = 0 and po.company_id = ".$_SESSION['company_id']." ".$where.check_user('po'));
 			$sTable = "tbl_journal as po";			
 			$isJOIN = array();
 			$hOrder = "po.journal_date desc";

@@ -13,6 +13,7 @@ include("../../config/config.php");
 include("../../config/session.php");
 include("../../include/function_database_query.php");
 include_once("../../include/balance_sheet_functions.php");
+include_once("../../include/common_functions.php");
 
 $POST = ($_POST != NULL)? bulk_filter($dbcon,$_POST) : bulk_filter($dbcon,$_GET) ;
 		
@@ -35,13 +36,9 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     
     // Liabilities Variables
     $capital_account = get_capital_account($dbcon, $start_date);
-    
     $loans_liability = get_loans($dbcon, $where_date);
-    //echo '<pre>';    print_r($loans_liability); exit;
-    $current_liabilities = get_current_liabilities($dbcon, $where_date);
+    $current_liabilities = get_current_liabilities($dbcon, $start_date, $end_date);
     $suspence_account_value = get_suspence_account_value($dbcon, $start_date);
-    //echo '<pre>';    print_r($current_liabilities); exit;
-//    $pl_value = 0.00; //get_pl_account_value($dbcon, $where_date); 
     
     $capital_account_entries = $loans_entries = $current_liabilities_entries = $suspence_account_entries = '';
     
@@ -51,7 +48,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     $total_assets = number_format((float)$total_assets, 2, '.', '');
     $total_liability = number_format((float)$total_liability, 2, '.', '');
     
-    if(strtolower($POST['show_details']) == "true") {
+    /*if(strtolower($POST['show_details']) == "true") {
     
         // Assets Entries 
 //        $fixed_assets_entries = get_fixed_assets_entries($dbcon, $where_date);
@@ -64,7 +61,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
 //        $loans_entries = get_loans_entries($dbcon, $where_date);
 //        $current_liabilities_entries = get_current_liabilities_entries($dbcon, $where_date);
 //        $suspence_account_entries = get_suspence_account_entries($dbcon, $where_date);
-    }
+    }*/
     
     $str='';
     $str.='<table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >
@@ -99,7 +96,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                     <table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >
                         <tr>
                                 <td><strong>Capital Account</strong></td>
-                                <td style="text-align: right;">'.number_format((float)$capital_account['value'],2).'</td>
+                                <td style="text-align: right;">'. indian_number((float)$capital_account['value'],2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2">'.$capital_account['entries'].'</td>
@@ -107,7 +104,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         <tr style="height: 10px;"><td colspan="2"></td></tr>
                         <tr>
                                 <td><strong>Loans (Liabilities)</strong></td>
-                                <td style="text-align: right;">'.number_format((float)$loans_liability['value'],2).'</td>
+                                <td style="text-align: right;">'. indian_number((float)$loans_liability['value'],2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2">'.$loans_liability['entries'].'</td>
@@ -116,7 +113,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         $style = ($current_liabilities['value'] < 0) ? 'color: red;' : '';
                         $str .= '<tr>
                                 <td><strong>Current Liabilities</strong></td>
-                                <td style="text-align: right;'.$style.'">'.number_format((float)$current_liabilities['value'], 2).'</td>
+                                <td style="text-align: right;'.$style.'">'. indian_number((float)$current_liabilities['value'], 2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2">
@@ -126,7 +123,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         <tr style="height: 10px;"><td colspan="2"></td></tr>
                         <tr>
                                 <td><strong>Suspence Accounts</strong></td>
-                                <td style="text-align: right;">'.$suspence_account_value.'</td>
+                                <td style="text-align: right;">'.indian_number($suspence_account_value,2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2">
@@ -156,7 +153,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                     <table style="font-size:15px;border-collapse: collapse;border-top:none;" cellpadding="0" cellspacing="0" width="100%" >
                         <tr>
                                 <td><strong>Fixed Assets<strong></td>
-                                <td style="text-align: right;">'.number_format((float)$fixed_assets['value'], 2).'</td>
+                                <td style="text-align: right;">'. indian_number((float)$fixed_assets['value'], 2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2">'.$fixed_assets['entries'].'</td>
@@ -164,7 +161,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                         <tr style="height: 10px;"><td colspan="2"></td></tr>
                         <tr>
                                 <td><strong>Investments<strong></td>
-                                <td style="text-align: right;">'.$investments_value.'</td>
+                                <td style="text-align: right;">'.indian_number($investments_value,2).'</td>
                         </tr>
                         <tr class="descripc">
                                 <td colspan="2" >
@@ -181,8 +178,8 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                                         '.$current_assets['entries'].'
                                 </td>
                         </tr>
-                        <tr style="height: 10px;"><td colspan="2"></td></tr>
-                        <tr>
+                        <tr style="height: 10px;"><td colspan="2"></td></tr>';
+                    /*$str .= '<tr>
                                 <td><strong>Miscellenous Expense<strong></td>
                                 <td style="text-align: right;">'.$misc_expense_value.'</td>
                         </tr>
@@ -192,7 +189,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
                                 </td>
                         </tr>
                         <tr style="height: 10px;"><td colspan="2"></td></tr>
-                        ';
+                        ';*/
                     /*if($total_liability > $total_assets ){
                         $grand_total = $total_liability;
                         $pl_value = $total_liability - $total_assets;

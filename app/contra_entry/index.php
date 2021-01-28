@@ -28,7 +28,7 @@ else {
 			$i=1;
 			$aColumns = array('contra_id','contra_no','contra_date','remark','contra_status','po.cdate','po.user_id');
 			$sIndexColumn = "contra_id";
-			$isWhere = array("po.contra_status = 0".$where.check_user('po'));
+			$isWhere = array("po.contra_status = 0 and po.company_id = ".$_SESSION['company_id']." ".$where.check_user('po'));
 			$sTable = "tbl_contra as po";			
 			$isJOIN = array();
 			$hOrder = "po.contra_date desc";

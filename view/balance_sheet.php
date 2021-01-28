@@ -15,8 +15,8 @@ else
     $start = $_SESSION['start'];
     $end = $_SESSION['end'];
 }
-$start_date = date('01-04-Y');
-$end_date = date("d-m-Y");
+$date = get_financial_year();
+extract($date);
 ?>
 
 <!DOCTYPE html>

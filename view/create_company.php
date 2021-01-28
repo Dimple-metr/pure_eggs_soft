@@ -138,22 +138,30 @@
 								</div>
                              </div>
 							 <div class="form-group">
-							  <label class="col-md-3 control-label">Choose Security Question </label>
-							  <div class="col-md-6 col-xs-11">
+                                                                <label class="col-md-3 control-label">Choose Security Question </label>
+                                                                <div class="col-md-6 col-xs-11">
 									<select class="form-control" name="question_id" id="question_id" required title="Select Question">
-										<?=getquestion($dbcon,decrypt($rel['question_id'], $key))?>
+										 <?=getquestion($dbcon,decrypt($rel['question_id'], $key))?> 
 									<select>
 								</div>
-                             </div>
-							 <div class="form-group">
-							  <label class="col-md-3 control-label">Give Answer</label>
-							  <div class="col-md-6 col-xs-11">
-									<input type="text" class="form-control" placeholder="Give Answer" name="give_answer" id="give_answer"  value="<?=decrypt($rel['answer'],$key)?>" required title="Enter Give Answer" />
-								</div>
-                             </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label class="col-md-3 control-label">Give Answer</label>
+                                                            <div class="col-md-6 col-xs-11">
+                                                                <input type="text" class="form-control" placeholder="Give Answer" name="give_answer" id="give_answer"  value="" required title="Enter Give Answer" /> <?php /* ?> <?=decrypt($rel['answer'],$key)?> <?php */ ?>
+                                                            </div> 
+                                                        </div>
+                                                        <div class="form-group" style="display: none;">
+                                                            <label class="col-md-3 control-label">Currency</label>
+                                                            <div class="col-md-6 col-xs-11">
+                                                                    <select class="select2" name="currency_id" id="currency_id"  required title="Select Currency">
+                                                                        <?//=getcurrency($dbcon,$rel['currency_id']);?> 
+                                                                    </select>
+                                                            </div>
+                                                        </div>
 							<button type="submit" class="btn btn-danger">Submit</button> &nbsp;
 							<a href="<?=ROOT.'company_list'?>" type="button" class="btn btn-success">Cancel</a><div class="col-md-3"></div></div>
-						</div><!--Vendor row end-->	
+                                                        </div><!--Vendor row end-->	
 							<input type='hidden' name='mode' id='mode' value='<?=$mode?>' />
 							<input type='hidden' name='eid' id='eid' value='<?=$rel['company_id']?>' />			  
 							

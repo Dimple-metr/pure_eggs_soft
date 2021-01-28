@@ -20,9 +20,13 @@ else {
 }
 
 	if(strtolower($POST['mode']) == "fetch") {
+            
+                $edit_btn_per=check_permission('invoice_list',$_SESSION['user_type'],'edit',$dbcon);
+		$delete_btn_per=check_permission('invoice_list',$_SESSION['user_type'],'delete',$dbcon);
 		$s_date=explode(' - ',$POST['date']);
 		$_SESSION['start']=$s_date[0];
 		$_SESSION['end']=$s_date[1];
+                $edit=''; $delete='';
 		
 		$where='';$where1='';
 			if(!empty($POST['type_id']))
@@ -34,13 +38,14 @@ else {
 			$i=1;
 			$aColumns = array('invoice_id','invoice_no','cust.company_name','city.city_name','invoice_date','invoicetype.invoice_type','g_total','paid_amount','us.user_name','invoice_status','invoice.cdate','invoice.user_id','invoice.usertype_id','invoice.invoicetype_id','invoice.gst_flag');
 			$sIndexColumn = "invoice_id";
-			$isWhere = array("invoice_status = 0".$where.$where1.check_user('invoice'));
+			$isWhere = array("invoice_status = 0 and invoice.company_id = ".$_SESSION['company_id']." ".$where.$where1.check_user('invoice'));
 			$sTable = "tbl_invoice as invoice";			
 			$isJOIN = array('left join  tbl_ledger cust on invoice.cust_id=cust.l_id','left join  city_mst city on cust.cityid=city.cityid','left join tbl_invoicetype invoicetype on invoice.invoicetype_id=invoicetype.invoicetype_id','left join users as us on us.user_id=invoice.user_id');
 			$hOrder = "invoice.invoice_id desc";
 			include('../../include/pagging.php');
 			$appData = array();
 			$id=1;
+                        $total = 0;
 			foreach($sqlReturn as $row) {
 				$row_data = array();
 				$row_data[] = $row['invoice_type'];
@@ -71,11 +76,13 @@ else {
 					
 					$letterprint='<!--<a class="btn btn-xs btn-info" data-original-title="Dispatch Form Print" data-toggle="tooltip" data-placement="top" href="'.ROOT.'dispath_form/'.$row['invoice_id'].'"><i class="fa fa-file-text"></i></a>--> ';
 					
-					$delete='<button class="btn btn-xs btn-danger" data-original-title="Delete" data-toggle="tooltip" data-placement="top" onClick="delete_invoice('.$row['invoice_id'].')"><i class="fa fa-trash-o"></i></button>';
+                                        if($delete_btn_per)
+                                            $delete='<button class="btn btn-xs btn-danger" data-original-title="Delete" data-toggle="tooltip" data-placement="top" onClick="delete_invoice('.$row['invoice_id'].')"><i class="fa fa-trash-o"></i></button>';
 					
 					$send='<button class="btn btn-xs btn-primary" data-original-title="Send Invoice" data-toggle="tooltip" data-placement="top" onClick="send_invoice('.$row['invoice_id'].')"><i class="fa fa-location-arrow"></i></button>';
 					
-					$edit='<a class="btn btn-xs btn-warning" data-original-title="Edit" data-toggle="tooltip" data-placement="top" href="'.ROOT.'invoiceedit/'.$row['invoice_id'].'"><i class="fa fa-pencil"></i></a>';
+                                        if($edit_btn_per)
+                                            $edit='<a class="btn btn-xs btn-warning" data-original-title="Edit" data-toggle="tooltip" data-placement="top" href="'.ROOT.'invoiceedit/'.$row['invoice_id'].'"><i class="fa fa-pencil"></i></a>';
 					
 					
 					$print1='<button class="btn btn-xs btn-info" data-original-title="Print Invoice" data-toggle="tooltip" data-placement="top" onClick="sprint('.$row['invoice_id'].')"><i class="fa fa-print"></i></button>';

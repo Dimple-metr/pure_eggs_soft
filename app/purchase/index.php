@@ -11,7 +11,8 @@ include_once("../../include/common_functions.php");
 $POST = ($_POST != NULL)? bulk_filter($dbcon,$_POST) : bulk_filter($dbcon,$_GET) ;
 		
 if(strtolower($POST['mode']) == "fetch") {
-			
+    $edit_btn_per=check_permission('purchase_list',$_SESSION['user_type'],'edit',$dbcon);
+    $delete_btn_per=check_permission('purchase_list',$_SESSION['user_type'],'delete',$dbcon);
     $s_date=explode(' - ',$POST['date']);
     $_SESSION['start']=$s_date[0];
     $_SESSION['end']=$s_date[1];
@@ -22,7 +23,7 @@ if(strtolower($POST['mode']) == "fetch") {
     $i=1;
     $aColumns = array('po_id','po_no','vender.company_name','city.city_name','po_date','g_total','paid_amount','status','po.cdate','po.userid');
     $sIndexColumn = "po_id";
-    $isWhere = array("status = 0".$where.check_user('po'));
+    $isWhere = array("status = 0 and po.company_id = ".$_SESSION['company_id']." ".$where.check_user('po'));
     $sTable = "tbl_pono as po";			
     $isJOIN = array('left join tbl_ledger as vender on po.vender_id=vender.l_id','left join  city_mst city on vender.cityid=city.cityid');
     $hOrder = "po.po_id desc";
@@ -35,7 +36,7 @@ if(strtolower($POST['mode']) == "fetch") {
         $row_data[] = date('d M, Y',strtotime($row['po_date']));
         $row_data[] = $row['company_name'];
         $row_data[] = $row['city_name'];
-        $row_data[] = $row['g_total'];
+        $row_data[] = indian_number($row['g_total']);
         /*if($row['g_total']>$row['paid_amount'])
         {
                 $row_data[] = "<div class='external-event label label-warning ui-draggable' style='position: relative;'>DUE (RS. ".($row['g_total']-$row['paid_amount']).")</div>";
@@ -52,11 +53,14 @@ if(strtolower($POST['mode']) == "fetch") {
         else{
                 $dr_btn= '';
         }
-					
-        $delete='<button class="btn btn-xs btn-danger" data-original-title="Delete" data-toggle="tooltip" data-placement="top" onClick="delete_invoice('.$row['po_id'].')"><i class="fa fa-trash-o"></i></button>';
+		
+        if($delete_btn_per)
+            $delete='<button class="btn btn-xs btn-danger" data-original-title="Delete" data-toggle="tooltip" data-placement="top" onClick="delete_invoice('.$row['po_id'].')"><i class="fa fa-trash-o"></i></button>';
+        
         $view='<a class="btn btn-xs btn-info" data-original-title="View" data-toggle="tooltip" data-placement="top" href="'.ROOT.'purchase_view/'.$row['po_id'].'"><i class="fa fa-eye"></i></a> ';
 
-        $edit='<a class="btn btn-xs btn-warning" data-original-title="Edit" data-toggle="tooltip" data-placement="top" href="'.ROOT.'purchaseedit/'.$row['po_id'].'"><i class="fa fa-pencil"></i></a>';
+        if($edit_btn_per)
+            $edit='<a class="btn btn-xs btn-warning" data-original-title="Edit" data-toggle="tooltip" data-placement="top" href="'.ROOT.'purchaseedit/'.$row['po_id'].'"><i class="fa fa-pencil"></i></a>';
         $row_data[] = $edit.' '.$delete.' '.$view;
 			 
         $appData[] = $row_data;
@@ -194,7 +198,7 @@ else if(strtolower($POST['mode']) == "add") {
 							$updateid=update_record('tbl_pono', $info,"po_id=".$POST['eid'] , $dbcon);
 							
 						$general_book_id=get_general_book_id($dbcon,'tbl_purchase',$POST['eid'],$POST['vender_id']);	
-						add_general_book_entry($dbcon,"tbl_purchase",$POST['eid'],1,$POST['vender_id'],$POST['g_total'],$general_book_id,$POST['po_date']);
+						add_general_book_entry($dbcon,"tbl_purchase",$POST['eid'],1,$POST['vender_id'],$POST['total'],$general_book_id,$POST['po_date']);
 					
 						general_book_tax_entry($dbcon,$POST['eid']);
 						

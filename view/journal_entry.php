@@ -5,7 +5,7 @@
 	include_once("../include/common_functions.php");
 		$token = md5(rand(1000,9999));
 		$_SESSION['token'] = $token;
-		$form="Journal Vouchare";
+		$form="Journal Voucher";
 		$countryid='101';
 		$stateid='1';
 		$cityid='1';

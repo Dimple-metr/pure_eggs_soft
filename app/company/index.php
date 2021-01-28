@@ -46,7 +46,7 @@ include("../../include/function_database_query.php");
 			
 				$appData[] = $row_data;
 				$id++;
-				}
+                        }
 			
 			$output['aaData'] = $appData;
 			echo json_encode( $output );

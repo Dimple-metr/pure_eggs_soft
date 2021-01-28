@@ -14,7 +14,7 @@
 		$mode="Add";
 		$date=date('d-m-Y');
 		$load_inv_type='';
-		 $query="select l_id from  tbl_ledger where l_group=25 and company_id=".$_SESSION['company_id'];
+		$query="select l_id from  tbl_ledger where l_group=25 and company_id=".$_SESSION['company_id'];
 		$rel=mysqli_fetch_assoc($dbcon->query($query));	
 		$sales_ledger=$rel['l_id'];
 		

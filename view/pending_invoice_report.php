@@ -5,8 +5,11 @@
 	include_once("../config/session.php");
 	include_once("../include/common_functions.php");
 	$form="Pending Invoice Report";
-        $start_date = date('01-m-Y');
-        $end_date = date('t-m-Y');
+        $date = get_financial_year();
+        extract($date);
+//        $start_date = date('01-m-Y');
+//        $end_date = date('t-m-Y');
+        $ledgers = implode(',',get_sub_group($dbcon, "37,38"));
 ?>
 
 <!DOCTYPE html>
@@ -92,7 +95,7 @@
                                                         <label class="control-label col-lg-4 col-md-4 col-xs-4 respad-l0" style="white-space: nowrap;">Customer</label>
                                                         <div class=" col-lg-8 col-md-8 col-xs-8 respad-r0">
                                                             <select class="select2" name="customer_id" id="customer_id" title="Select Customer" onchange="reload_data();">
-                                                                <?=get_ledger($dbcon,'','AND l_group IN (37,38)');?>
+                                                                <?=get_ledger($dbcon,'','AND l_group IN ('.$ledgers.')');?>
                                                             </select>
                                                         </div>
                                                     </div>

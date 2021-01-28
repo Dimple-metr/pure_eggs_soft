@@ -14,7 +14,7 @@ function get_company_name($dbcon){
  *  Assets Function - to fetch values 
  */
 function get_fixed_assets($dbcon, $where_date){
-    $fa_query = "SELECT gb.ledger_id,led.l_name,sum(gb.amount) as amount
+    $fa_query = "SELECT gb.ledger_id,led.l_name,led.l_id,sum(gb.amount) as amount
         FROM `tbl_general_book` gb 
         LEFT join tbl_ledger as led ON led.l_id= gb.ledger_id 
         LEFT join tbl_group as gro ON gro.g_id=led.l_group 
@@ -36,8 +36,8 @@ function get_fixed_assets($dbcon, $where_date){
                 if($amount > 0){
                     $str.='
                         <tr>
-                            <td>'.$fa_entry["l_name"].'</td>
-                            <td style="text-align: right;">'.$amount.'</td>
+                            <td><a style="color: inherit;" href="ledger_detail_view.php?ledger_id='.$fa_entry["l_id"].'" target="_blank">'.$fa_entry["l_name"].'</a></td>
+                            <td style="text-align: right;">'.indian_number($amount,2).'</td>
                         </tr>
                     ';
                     $fixed_assets_value = $fixed_assets_value + $amount;
@@ -53,15 +53,17 @@ function get_fixed_assets($dbcon, $where_date){
 
 function get_current_assets($dbcon, $start_date, $end_date){
     //get all groups under current assets
-    $ca_sub_qry = "SELECT g_id AS ca_sub_group FROM `tbl_group` WHERE `g_pid`= ".CURRENT_ASSETS;
+    $ca_sub_qry = "SELECT g_id AS ca_sub_group FROM `tbl_group` WHERE g_status = 0 And `g_pid`= ".CURRENT_ASSETS;
     $result = mysqli_query($dbcon,$ca_sub_qry);
     $ca_sub_groups = mysqli_fetch_all($result,MYSQLI_ASSOC);
     
+    //$ca_sub_groups = get_sub_group($dbcon, CURRENT_ASSETS);
     $ca_entries = array();
     foreach ($ca_sub_groups as $ca_sub_group) {
         $sub_group_id = $ca_sub_group['ca_sub_group'];
         if($sub_group_id){
-            $sub_ledger_qry = "SELECT group_concat(l_id) as sub_ledger FROM `tbl_ledger` WHERE `l_group` IN (".$sub_group_id.")";
+            $sub_groups = implode(',',get_sub_group($dbcon, $sub_group_id));
+            $sub_ledger_qry = "SELECT group_concat(l_id) as sub_ledger FROM `tbl_ledger` WHERE l_status = ".ACTIVE." AND l_group IN (".$sub_groups.")";
             $sub_ledger = $dbcon->query($sub_ledger_qry)->fetch_object()->sub_ledger;
 //            
             $ca_qry = "select sum(opn_balance) as opening_balance,balance_typeid,
@@ -81,7 +83,6 @@ function get_current_assets($dbcon, $start_date, $end_date){
                             and ref_date < '".$start_date."' 
                         group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
                 where l_status = ".ACTIVE." AND company_id = ".$_SESSION['company_id']." 
-                    AND l_group IN (".$sub_group_id.")
                     AND cust.l_id IN (".$sub_ledger.")
                 ";
         
@@ -137,8 +138,8 @@ function get_current_assets($dbcon, $start_date, $end_date){
                 if($amount > 0){
                     $str.='
                         <tr>
-                            <td><a style="color: inherit;" href="balance_sheet_details.php?group_id='.$ca_entry["group_id"].'" target="_blank">'.$ca_entry["group_name"].'</a></td>
-                            <td style="text-align: right;" '.$style.'>'.number_format($amount,2).'</td>
+                            <td><a style="color: inherit;" href="group_detail_view.php?group_id='.$ca_entry["group_id"].'" target="_blank">'.$ca_entry["group_name"].'</a></td>
+                            <td style="text-align: right;" '.$style.'>'.indian_number($amount,2).'</td>
                         </tr>
                     ';
                     $ca_value = $ca_value + $amount;
@@ -308,40 +309,86 @@ function get_misc_expense_entries($dbcon, $where_date){
  */
 
 function get_capital_account($dbcon, $start_date){
-    $capital_ac_qry = "SELECT gro.g_name,sum(gb.amount) as amount
-        FROM tbl_general_book gb 
-        LEFT JOIN tbl_journal_trn as jrt ON jrt.journal_trn_id = gb.table_id 
-	LEFT JOIN tbl_journal as jou ON jou.journal_id=jrt.journal_id 
-        LEFT join tbl_ledger as led ON led.l_id= gb.ledger_id 
-        LEFT join tbl_group as gro ON gro.g_id=led.l_group 
-        WHERE led.l_status = 0 
-            AND jrt.journal_trn_status = ".ACTIVE."
-            AND led.company_id = ".$_SESSION['company_id']." 
-            AND gro.g_id = ".CAPITAL_ACCOUNT." 
-            AND led.l_group IN (".CAPITAL_ACCOUNT.") 
-            AND gb.entry_type = ".CREDIT." 
-            AND gb.ref_date <= '".$start_date."'
-            AND gb.genral_book_status = ".ACTIVE;
-    //echo $capital_ac_qry;
-    $capital_account_res = $dbcon->query($capital_ac_qry);
+    $sub_ledger_qry = "SELECT group_concat(l_id) as sub_ledger FROM `tbl_ledger` WHERE `l_group` IN (".CAPITAL_ACCOUNT.")";
+    $sub_ledger = $dbcon->query($sub_ledger_qry)->fetch_object()->sub_ledger;
     
-    $capital_account = array();
+    $capital_ac_qry = "select sum(opn_balance) as opening_balance,balance_typeid,
+                sum(debitamount) as debitamount ,sum(creditamount) as creditamount,l_id as ledger_id,
+                l_name as ledger_name
+                from tbl_ledger as cust 
+                left join (select sum(amount) as debitamount,invoice.ledger_id 
+                        from tbl_general_book as invoice 
+                        where genral_book_status=".ACTIVE." and table_name!='tbl_ledger' 
+                            and entry_type= ".DEBIT." and invoice.company_id=".$_SESSION['company_id']." 
+                            and ref_date < '".$start_date."' 
+                        group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
+                left join (select sum(amount) as creditamount,rec.ledger_id 
+                        from tbl_general_book as rec 
+                        where genral_book_status= ".ACTIVE." and table_name!='tbl_ledger' 
+                            and entry_type= ".CREDIT." and company_id=".$_SESSION['company_id']."
+                            and ref_date < '".$start_date."' 
+                        group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
+                where l_status = ".ACTIVE." AND company_id = ".$_SESSION['company_id']." 
+                    AND l_group IN (".CAPITAL_ACCOUNT.")
+                    AND cust.l_id IN (".$sub_ledger.")";
+    //echo $capital_ac_qry;
+    $capital_account_res = mysqli_query($dbcon,$capital_ac_qry);
+    $ca_result = mysqli_fetch_all($capital_account_res,MYSQLI_ASSOC);
+    
+    $ca_entries = array();
+    if($ca_result){
+        foreach ($ca_result as $value) {
+            $balance_type = $value['balance_typeid'];
+            $op_balance = ($balance_type=="2" ? ($value['opening_balance']) :-$value['opening_balance']);
+            $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
+
+            $payment_qry = 'select sum(amount) as amount, entry_type from tbl_general_book as payment
+                    where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
+                        and ref_date>="'.date('Y-m-d',strtotime($start_date)).'" 
+                        and ref_date<="'.date('Y-m-d',strtotime($end_date)).'" 
+                        and table_name!="tbl_ledger" and payment.ledger_id IN ('.$sub_ledger.') 
+                    GROUP BY payment.entry_type
+                    ORDER BY payment.ref_date
+                    ';
+            $result = mysqli_query($dbcon, $payment_qry);
+            $payment_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+                        
+            if($payment_result){
+                foreach ($payment_result as $payment) {
+                    if($payment['entry_type']==2){
+                        $balance += $payment['amount'];
+
+                    }else{
+                        $balance -= $payment['amount'];
+                    }
+                }
+            }
+            //$ca_value['group_id'] = $sub_group_id;ledger_id
+            //$ca_value['ledger_id'] = $value['ledger_id'];
+            $ca_value['ledger_name'] = $value['ledger_name'];
+            $ca_value['ca_value'] = abs($balance);
+            array_push($ca_entries, $ca_value);
+        }
+    }
     $capital_account_value = 0;
     $str = '';
-    if($capital_account_res){
-        $str.= '<table style="font-size:15px;border-collapse: collapse;border-top:none;width:80%" cellpadding="0" cellspacing="0" >';
-        while($ca_entry = mysqli_fetch_assoc($capital_account_res)){
-                $amount = number_format((float)$ca_entry["amount"], 2);
+    if($ca_entries && !empty($ca_entries)){
+        $str.= '<table style="font-size:15px;border-collapse: collapse;border-top:none;width:80%" cellpadding="0" cellspacing="0">';
+            foreach ($ca_entries as $ca_entry) {
+                
+                $amount = number_format((float)$ca_entry["ca_value"], 2, '.', '');
+                $style = ($amount < 0) ? 'style="color: red;"' : '';
                 if($amount > 0){
                     $str.='
                         <tr>
-                            <td>'.$ca_entry["l_name"].'</td>
-                            <td style="text-align: right;">'.$amount.'</td>
+                            <!--<td><a style="color: inherit;" href="ledger_monthly_view.php?ledger_id='.$ca_entry["ledger_id"].'" target="_blank">'.$ca_entry["ledger_name"].'</a></td>-->
+                            <td>'.$ca_entry["ledger_name"].'</td>
+                            <td style="text-align: right;" '.$style.'>'.indian_number($amount,2).'</td>
                         </tr>
                     ';
                     $capital_account_value = $capital_account_value + $amount;
                 }
-        }
+            }
         $str .= "</table>";
     }
     $capital_account['entries'] = $str;
@@ -362,7 +409,8 @@ function get_loans($dbcon, $where_date){
                         ->fetch_object()->ledger;
                 $loan_qry = "select sum(opn_balance) as opening_balance,balance_typeid,
                 sum(debitamount) as debitamount ,sum(creditamount) as creditamount,
-                l_name as ledger_name
+                l_name as ledger_name,
+                l_id as ledger_id
                 from tbl_ledger as cust 
                 left join (select sum(amount) as debitamount,invoice.ledger_id 
                         from tbl_general_book as invoice 
@@ -391,9 +439,9 @@ function get_loans($dbcon, $where_date){
                         $op_balance = ($balance_type=="2" ? ($value['opening_balance']) :-$value['opening_balance']);
                         $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
 
-                        $loan['ledger_id'] = $sub_group_id;
+                        $loan['ledger_id'] =  $value['ledger_id'];
                         $loan['ledger_name'] = $value['ledger_name'];
-                        $loan['ca_value'] = abs($balance);
+                        $loan['loan_value'] = abs($balance);
                         array_push($loans_entries, $loan);
                     }
                 }
@@ -405,13 +453,13 @@ function get_loans($dbcon, $where_date){
         $str.= '<table style="font-size:15px;border-collapse: collapse;border-top:none;width:80%" cellpadding="0" cellspacing="0">';
             foreach ($loans_entries as $loans_entry) {
                 
-                $amount = number_format((float)$loans_entry["ca_value"], 2, '.', '');
+                $amount = number_format((float)$loans_entry["loan_value"], 2, '.', '');
                 $style = ($amount < 0) ? 'style="color: red;"' : '';
                 if($amount > 0){
                     $str.='
                         <tr>
-                            <td>'.$loans_entry["ledger_name"].'</td>
-                            <td style="text-align: right;" '.$style.'>'.number_format($amount,2).'</td>
+                            <td><a style="color: inherit;" href="ledger_monthly_view.php?ledger_id='.$loans_entry["ledger_id"].'" target="_blank">'.$loans_entry["ledger_name"].'</a></td>
+                            <td style="text-align: right;" '.$style.'>'. indian_number($amount,2).'</td>
                         </tr>
                     ';
                     $loan_value = $loan_value + $amount;
@@ -472,7 +520,7 @@ function get_suspence_account_value($dbcon, $where_date){
         $suspence_account_value = $suspence_account_entry["suspence_value"];
     }
     
-    return number_format((float)$suspence_account_value, 2, '.', '');;
+    return number_format((float)$suspence_account_value, 2, '.', '');
 }
 
 function get_pl_account_value($dbcon, $where_date){
@@ -549,81 +597,75 @@ function get_loans_entries($dbcon, $where_date){
     return $str;
 }
 
-function get_current_liabilities($dbcon, $where_date){
+function get_current_liabilities($dbcon, $start_date, $end_date){
     //get all groups under current liablities
-    $cl_sub_qry = "SELECT g_id AS cl_sub_group FROM `tbl_group` WHERE `g_pid`= ".CURRENT_LIABILITIES;
+    $cl_sub_qry = "SELECT g_id AS cl_sub_group FROM `tbl_group` WHERE g_status = 0 And `g_pid`= ".CURRENT_LIABILITIES;
     $result = mysqli_query($dbcon,$cl_sub_qry);
     $cl_sub_groups = mysqli_fetch_all($result,MYSQLI_ASSOC);
     
     $cl_entries = array();
     foreach ($cl_sub_groups as $cl_sub_group) {
         $sub_group_id = $cl_sub_group['cl_sub_group'];
-        if($sub_group_id) {//&& $sub_group_id == SUNDRY_CREDITORS){
-            /*$cl_qry = "
-                SELECT sum(creditors-debtors) as cl_value, 
+        if($sub_group_id) {
+            $sub_ledger_qry = "SELECT group_concat(l_id) as sub_ledger FROM `tbl_ledger` WHERE `l_group` IN (".$sub_group_id.")";
+            $sub_ledger = $dbcon->query($sub_ledger_qry)->fetch_object()->sub_ledger;
+            
+            $cl_qry = "select sum(opn_balance) as opening_balance,balance_typeid,
+                sum(debitamount) as debitamount ,sum(creditamount) as creditamount,
                 (SELECT g_name FROM `tbl_group` WHERE `g_id` = ".$sub_group_id.") as group_name
-                FROM `tbl_ledger` as pro 
-                LEFT JOIN (
-                    select cert.product_amount as creditors,l_id
-                    from tbl_general_book as cgen 
-                    left join tbl_potrancation as cert on cert.po_id = cgen.table_id 
-                    LEFT JOIN tbl_product as pro on pro.product_id = cert.product_id 
-                    LEFT JOIN tbl_pono as po on po.po_id = cert.po_id  
-                    left join tbl_ledger as led on led.l_id=cgen.ledger_id 
-                    left join tbl_group as gro on gro.g_id=led.l_group 
-                    where potrancation_status = ".ACTIVE." 
-                        and gro.g_id IN (".SUNDRY_CREDITORS.") 
-                        and cgen.entry_type = ".CREDIT." 
-                        AND cgen.ref_date ".$where_date."
-                    group by led.l_group 
-                    order by led.l_id) as genbook on genbook.l_id = pro.l_id
-                LEFT JOIN (
-                    select SUM(cgen.amount) as debtors,l_id
-                    from tbl_general_book as cgen 
-                    left join tbl_invoicetrn as jrt on jrt.invoice_id = cgen.table_id 
-                    left join tbl_invoice as jou on jou.invoice_id = jrt.invoice_id 
-                    left join tbl_ledger as led on led.l_id=cgen.ledger_id 
-                    left join tbl_group as gro on gro.g_id=led.l_group 
-                    where trancation_status = ".ACTIVE." 
-                        and gro.g_id IN (".SUNDRY_CREDITORS.") 
-                        and cgen.entry_type = ".DEBIT." 
-                        and jou.invoice_date ".$where_date."
-                    group by led.l_group 
-                    order by led.l_id) as jout on jout.l_id = pro.l_id
-                WHERE pro.l_status != ".DELETED." 
-                AND company_id = 1 ";
-        } else { */
-            /*$cl_qry = "SELECT gro.g_name as group_name,sum(gb.amount) as cl_value
-                FROM tbl_general_book gb 
-                LEFT join tbl_ledger as led ON led.l_id= gb.ledger_id 
-                LEFT join tbl_group as gro ON gro.g_id=led.l_group 
-                WHERE led.l_status = ".ACTIVE."
-                    AND led.company_id = ".$_SESSION['company_id']." 
-                    AND gro.g_pid = ".CURRENT_LIABILITIES." 
-                    AND l_group IN (".$sub_group_id.") 
-                    and gb.entry_type = ".CREDIT."  
-                    AND gb.ref_date ".$where_date."
-                    AND gb.genral_book_status = ".ACTIVE;*/
-            $cl_qry = "SELECT gro.g_name as group_name,sum(gb.amount) as cl_value
-                FROM tbl_general_book gb 
-                LEFT JOIN tbl_receipt as cert ON cert.receipt_id = gb.table_id
-                LEFT join tbl_ledger as led ON led.l_id = gb.ledger_id 
-                LEFT join tbl_group as gro ON gro.g_id =led.l_group 
-                WHERE led.l_status = ".ACTIVE."
-                    AND led.company_id = ".$_SESSION['company_id']." 
-                    AND gro.g_pid = ".CURRENT_LIABILITIES." 
-                    AND l_group IN (".$sub_group_id.") 
-                    and gb.entry_type = ".CREDIT."  
-                    AND payment_type = 2					
-                    AND cert.receipt_date ".$where_date."
-                    AND gb.genral_book_status = ".ACTIVE;
-        }
-        $cl_res = mysqli_query($dbcon,$cl_qry);
-        $cl_result = mysqli_fetch_all($cl_res,MYSQLI_ASSOC);
+                from tbl_ledger as cust 
+                left join (select sum(amount) as debitamount,invoice.ledger_id 
+                        from tbl_general_book as invoice 
+                        where genral_book_status=".ACTIVE." and table_name!='tbl_ledger' 
+                            and entry_type= ".DEBIT." and invoice.company_id=".$_SESSION['company_id']." 
+                            and ref_date < '".$start_date."' 
+                        group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
+                left join (select sum(amount) as creditamount,rec.ledger_id 
+                        from tbl_general_book as rec 
+                        where genral_book_status= ".ACTIVE." and table_name!='tbl_ledger' 
+                            and entry_type= ".CREDIT." and company_id=".$_SESSION['company_id']."
+                            and ref_date < '".$start_date."' 
+                        group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
+                where l_status = ".ACTIVE." AND company_id = ".$_SESSION['company_id']." 
+                    AND l_group IN (".$sub_group_id.")
+                    AND cust.l_id IN (".$sub_ledger.")
+                ";
+            $cl_res = mysqli_query($dbcon,$cl_qry);
+            $cl_result = mysqli_fetch_all($cl_res,MYSQLI_ASSOC);
 
-        if($cl_result){
-            foreach ($cl_result as $value) {
-                array_push($cl_entries, $value);
+            if($cl_result){
+                foreach ($cl_result as $value) {
+                    $balance_type = $value['balance_typeid'];
+                    $op_balance = ($balance_type=="2" ? ($value['opening_balance']) :-$value['opening_balance']);
+                    $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
+
+                    $payment_qry = 'select sum(amount) as amount, entry_type from tbl_general_book as payment
+                            where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
+                                and ref_date >= "'.date('Y-m-d',strtotime($start_date)).'" 
+                                and ref_date <= "'.date('Y-m-d',strtotime($end_date)).'" 
+                                and table_name!="tbl_ledger" and payment.ledger_id IN ('.$sub_ledger.') 
+                            GROUP BY payment.entry_type
+                            ORDER BY payment.ref_date
+                            ';
+                    $result = mysqli_query($dbcon, $payment_qry);
+                    $payment_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+                        
+                    if($payment_result){
+                        foreach ($payment_result as $payment) {
+                            if($payment['entry_type']==2){
+                                $balance += $payment['amount'];
+
+                            }else{
+                                $balance -= $payment['amount'];
+                            }
+                        }
+                    }
+                    
+                    $cl_value['group_id'] = $sub_group_id;
+                    $cl_value['group_name'] = $value['group_name'];
+                    $cl_value['cl_value'] = abs($balance);
+                    array_push($cl_entries, $cl_value);
+                }
             }
         }
     }
@@ -638,7 +680,7 @@ function get_current_liabilities($dbcon, $where_date){
                 if($amount > 0){
                     $str.='
                         <tr>
-                            <td>'.$cl_entry["group_name"].'</td>
+                            <td><a style="color: inherit;" href="group_detail_view.php?group_id='.$cl_entry["group_id"].'" target="_blank">'.$cl_entry["group_name"].'</a></td>
                             <td style="text-align: right;" '.$style.'>'.number_format($amount,2).'</td>
                         </tr>
                     ';

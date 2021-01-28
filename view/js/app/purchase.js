@@ -441,10 +441,10 @@ function load_purchase_datatable()
 			"oLanguage": {
 					"sLengthMenu": "_MENU_",
 					"sProcessing": "<img src='"+root_domain+"img/loading.gif'/> Loading ...",
-					"sEmptyTable": "NO DATA ADDED YET !",
+					"sEmptyTable": "NO DATA ADDED YET !"
 			},
-			"aLengthMenu": [[10, 20, 30, 50], [10, 20, 30, 50]],
-			"iDisplayLength": 10,
+			"aLengthMenu": [[-1,10, 20, 30, 50], ["All",10, 20, 30, 50]],
+			"iDisplayLength": -1,
 			"sAjaxSource": root_domain+'app/purchase/',
 			"fnServerParams": function ( aoData ) {
 				aoData.push( { "name": "mode", "value": "fetch" },{ "name": "report", "value": data },{ "name": "date", "value": date });

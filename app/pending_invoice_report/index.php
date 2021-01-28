@@ -83,10 +83,10 @@ if(strtolower($POST['mode']) == "pending_invoice_report") {
                             No Data Found.......
                     </td>
             </tr>';
-        }
-        $str.='</table>';
-        echo $str;
-    }
+	}
+	$str.='</table>';
+	echo $str;
+}
 		
 		
    

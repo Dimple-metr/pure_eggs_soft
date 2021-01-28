@@ -1,4 +1,192 @@
 <?php
+/* Added by : Dimple Panchal Start*/
+function get_group_legder($dbcon,$groupID,$start_date,$end_date){
+    //get all ledgers of groups
+    $sub_ledger_qry = "SELECT l_id FROM `tbl_ledger` WHERE l_status = 0 AND l_group IN (".$groupID.")";
+    $result = mysqli_query($dbcon, $sub_ledger_qry);
+    $sub_ledger_array = mysqli_fetch_all($result,MYSQLI_ASSOC);
+    
+    //get group name
+    $group_name = $dbcon->query("SELECT g_name group_name FROM `tbl_group` WHERE `g_id` = ".$groupID)->fetch_object()->group_name;
+    
+    $amount = 0;
+    foreach ($sub_ledger_array as $sub_ledger) {
+        $ca_qry = "select sum(opn_balance) as opening_balance,balance_typeid,
+                sum(debitamount) as debitamount ,sum(creditamount) as creditamount
+                from tbl_ledger as cust 
+                left join (select sum(amount) as debitamount,invoice.ledger_id 
+                        from tbl_general_book as invoice 
+                        where genral_book_status=0 and table_name!='tbl_ledger' 
+                            and entry_type= 2 and invoice.company_id=".$_SESSION['company_id']." 
+                            and ref_date < '".date('Y-m-d',strtotime($start_date))."' 
+                        group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
+                left join (select sum(amount) as creditamount,rec.ledger_id 
+                        from tbl_general_book as rec 
+                        where genral_book_status= 0 and table_name!='tbl_ledger' 
+                            and entry_type= 1 and company_id=".$_SESSION['company_id']."
+                            and ref_date < '".date('Y-m-d',strtotime($start_date))."' 
+                        group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
+                where l_status = 0 AND company_id = ".$_SESSION['company_id']." 
+                    AND cust.l_id IN (".$sub_ledger['l_id'].")
+                ";
+                
+        $result = mysqli_query($dbcon, $ca_qry);
+        $ca_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+
+        if($ca_result){
+            foreach ($ca_result as $value) {
+                //$balance_type = $value['balance_typeid'];
+                $op_balance = ($value['balance_typeid']=="2" ? ($value['opening_balance']) :-$value['opening_balance']);
+                $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
+
+                $payment_qry = 'select sum(amount) as amount, entry_type from tbl_general_book as payment
+                        where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
+                            and ref_date>="'.date('Y-m-d',strtotime($start_date)).'" 
+                            and ref_date<="'.date('Y-m-d',strtotime($end_date)).'" 
+                            and table_name!="tbl_ledger" and payment.ledger_id IN ('.$sub_ledger['l_id'].') 
+                        GROUP BY payment.entry_type
+                        ORDER BY payment.ref_date
+                                    ';
+                $result = mysqli_query($dbcon, $payment_qry);
+                $payment_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+
+                if($payment_result){
+                    foreach ($payment_result as $payment) {
+                        if($payment['entry_type']==2){
+                            $balance += $payment['amount'];
+
+                        }else{
+                            $balance -= $payment['amount'];
+                        }
+                    }
+                }
+            }
+            $amount += $balance;
+        }
+    }
+    $ca_value['group_id'] = $groupID;
+    $ca_value['group_name'] = $group_name;
+    $ca_value['amount'] = abs($amount);
+    return $ca_value;
+}
+function get_financial_year()
+{
+    //$today = "01-11-2020";
+    $date = date('d-m-Y');
+    $month = date('m', strtotime($date));
+    $year = date('Y', strtotime($date));
+        if ( $month > 3 ) {
+            $start_year = $year;
+            $end_year = $start_year + 1;
+        }
+        else {
+            $end_year = $year;
+            $start_year = $end_year - 1;
+        }
+	$sdate['start_date']=date('01-04-'.$start_year);
+	$sdate['end_date']=date('31-03-'.($end_year));
+	return $sdate;	
+}
+function get_ledger_by_group($dbcon,$group_id){
+    $sub_groups = array_column($dbcon->query("SELECT g_id FROM `tbl_group` WHERE g_status = 0 And `g_pid`= ".$group_id)->fetch_all(MYSQLI_ASSOC), 'g_id');
+    
+    $legders = '';
+    if($sub_groups){
+        foreach ($sub_groups as $subgroup) {
+            $sub_ledger_qry = "SELECT group_concat(l_id) as sub_ledger FROM `tbl_ledger` WHERE `l_group` IN (".$subgroup.")";
+            $sub_ledger = $dbcon->query($sub_ledger_qry)->fetch_object()->sub_ledger;
+
+            $legders .= $sub_ledger; 
+            get_ledger_by_group($dbcon, $subgroup);
+            
+        }
+    }
+    return $legders;
+}
+function get_sub_group($dbcon,$group_id,$sub_group_array = array()){
+    if($group_id){
+        if(!$sub_group_array){
+            array_push($sub_group_array,$group_id);
+        }
+        $groups = array_column($dbcon->query("SELECT g_id FROM `tbl_group` WHERE g_status = 0 And `g_pid` IN (".$group_id.")")->fetch_all(MYSQLI_ASSOC), 'g_id');
+        
+        if($groups){
+            foreach ($groups as $groupid) {
+                array_push($sub_group_array,$groupid);
+                $subgroup = array_column($dbcon->query("SELECT g_id FROM `tbl_group` WHERE g_status = 0 And `g_pid`= ".$groupid)->fetch_all(MYSQLI_ASSOC), 'g_id');
+
+                if($subgroup){
+                    foreach ($subgroup as $sub_group) {
+                        array_push($sub_group_array,$sub_group);
+                        get_sub_group($dbcon, $sub_group, $sub_group_array);
+                    }
+                }
+
+            }
+        }
+        //p($sub_group_array);
+        //$sub_group_ids = implode(',', $sub_group_array);
+        return $sub_group_array;
+    }
+}
+function load_ledger_detail($dbcon,$type,$ref_id, $ledger_id = 0){
+    if($type=="tbl_payment"){
+                $qry1="select receipt_id,receipt_no,cust_id,payment_mode_id ,l_name as ledger_name from tbl_receipt as cert 
+                        left join tbl_ledger as ledger on ledger.l_id = cert.payment_mode_id
+			where receipt_id=".$ref_id;
+		$ro=$dbcon->query($qry1);
+		$re=mysqli_fetch_assoc($ro);
+		//$ret= $re;
+	}else if($type=="tbl_journal_trn"){
+                $journalId = $dbcon->query("SELECT journal_id FROM tbl_journal_trn where journal_trn_id=".$ref_id)
+                            ->fetch_object()->journal_id;
+                $qry1="select jou.journal_id,journal_no,l_name as ledger_name from tbl_journal_trn as cert 
+			left join tbl_journal as jou on jou.journal_id=cert.journal_id
+                        left join tbl_ledger as ledger on ledger.l_id = cert.ledger_id
+                        WHERE cert.journal_id = ".$journalId." and ledger_id != ".$ledger_id;
+		$ro=$dbcon->query($qry1);
+		$re=mysqli_fetch_assoc($ro);
+                //p($re, TRUE);
+		//$ret=$re['journal_no'];
+	}else if($type=="tbl_invoice"){
+		$qry1="select invoice_id,invoice_no,l_name as ledger_name from tbl_invoice as cert
+                        left join tbl_ledger as ledger on ledger.l_id = cert.sales_ledger_id
+			where invoice_id=".$ref_id;
+		$ro=$dbcon->query($qry1);
+		$re=mysqli_fetch_assoc($ro);
+		//$ret=$re;
+	}
+	else if($type=="tbl_purchase"){
+		$qry1="select po_id,po_no,l_name as ledger_name from tbl_pono as cert 
+                        left join tbl_ledger as ledger on ledger.l_id = cert.purchase_ledger_id
+			where po_id=".$ref_id;
+		$ro=$dbcon->query($qry1);
+		$re=mysqli_fetch_assoc($ro);
+		//$ret=$re['po_no'];
+	}
+	else if($type=="tbl_contra_trn"){
+                $contra_id = $dbcon->query("SELECT contra_id FROM tbl_contra_trn where contra_trn_id=".$ref_id)
+                            ->fetch_object()->contra_id;
+            
+		$qry1="select jou.contra_id,contra_no,l_name as ledger_name from tbl_contra_trn as cert 
+			left join tbl_contra as jou on jou.contra_id=cert.contra_id
+                        left join tbl_ledger as ledger on ledger.l_id = cert.ledger_id
+                        WHERE cert.contra_id = ".$contra_id." and ledger_id != ".$ledger_id;
+		$ro=$dbcon->query($qry1);
+		$re=mysqli_fetch_assoc($ro);
+		//$ret=$re['contra_no'];
+	}
+	return $re;
+}
+function p($val, $isexit = FALSE) {
+    echo '<pre>';
+    print_r($val);
+    echo '</pre>';
+    if($isexit) {
+        die();
+    }
+}
+/* Added by : Dimple Panchal End*/
 function load_invoice_no($dbcon,$type_id){
 	//Load no by Type ID
 	$row=array();
@@ -22,41 +210,46 @@ function load_invoice_no($dbcon,$type_id){
 }
 function load_led_no($dbcon,$type,$ref_id){
 	if($type=="tbl_payment"){
-		$qry1="select * from tbl_receipt as cert 
+		$qry1="select receipt_no ,l_name as ledger_name from tbl_receipt as cert 
+                        left join tbl_ledger as ledger on ledger.l_id = cert.cust_id
 			where receipt_id=".$ref_id;
 		$ro=$dbcon->query($qry1);
 		$re=mysqli_fetch_assoc($ro);
-		$ret=$re['receipt_no'];
+		//$ret= $re;
 	}else if($type=="tbl_journal_trn"){
-		$qry1="select * from tbl_journal_trn as cert 
+		$qry1="select journal_no,l_name as ledger_name from tbl_journal_trn as cert 
 			left join tbl_journal as jou on jou.journal_id=cert.journal_id
+                        left join tbl_ledger as ledger on ledger.l_id = cert.ledger_id
 			where journal_trn_id=".$ref_id;
 		$ro=$dbcon->query($qry1);
 		$re=mysqli_fetch_assoc($ro);
-		$ret=$re['journal_no'];
+		//$ret=$re['journal_no'];
 	}else if($type=="tbl_invoice"){
-		$qry1="select * from tbl_invoice as cert 
+		$qry1="select invoice_no,l_name as ledger_name from tbl_invoice as cert
+                        left join tbl_ledger as ledger on ledger.l_id = cert.sales_ledger_id
 			where invoice_id=".$ref_id;
 		$ro=$dbcon->query($qry1);
 		$re=mysqli_fetch_assoc($ro);
-		$ret=$re['invoice_no'];
+		//$ret=$re;
 	}
 	else if($type=="tbl_purchase"){
-		$qry1="select * from tbl_pono as cert 
+		$qry1="select po_no,l_name as ledger_name from tbl_pono as cert 
+                        left join tbl_ledger as ledger on ledger.l_id = cert.purchase_ledger_id
 			where po_id=".$ref_id;
 		$ro=$dbcon->query($qry1);
 		$re=mysqli_fetch_assoc($ro);
-		$ret=$re['po_no'];
+		//$ret=$re['po_no'];
 	}
 	else if($type=="tbl_contra_trn"){
-		$qry1="select * from tbl_contra_trn as cert 
+		$qry1="select contra_no,l_name as ledger_name from tbl_contra_trn as cert 
 			left join tbl_contra as jou on jou.contra_id=cert.contra_id
+                        left join tbl_ledger as ledger on ledger.l_id = cert.ledger_id
 			where contra_trn_id=".$ref_id;
 		$ro=$dbcon->query($qry1);
 		$re=mysqli_fetch_assoc($ro);
-		$ret=$re['contra_no'];
+		//$ret=$re['contra_no'];
 	}
-	return $ret;
+	return $re;
 }
 function today_stock_value($dbcon,$stock_date,$product_id,$employee_id,$type){
 	

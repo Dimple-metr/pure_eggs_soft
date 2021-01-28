@@ -86,7 +86,7 @@
 												<div class="col-md-4 col-xs-12 ">
 													<select  class="select2" name="vender_id" id="vender_id" onChange="load_billdata(this.value);show_data();" >
 														<?//=get_ledger_cust($dbcon,$rel['vender_id']);?>	
-														<?=get_ledger($dbcon,$rel['vender_id']);?>	
+														<?=getcust($dbcon,$rel['vender_id']);?>		
 														
 													</select>
 												</div >

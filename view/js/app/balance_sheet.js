@@ -16,9 +16,8 @@ function load_balance_sheet(){
 		type: "POST",
                 async : true,
 		url: root_domain+'app/balance_sheet/',
-		data: { mode : "load_balance_sheet",show_details :false, start_date : startDate, end_date: endDate },
+		data: { mode : "load_balance_sheet", start_date : startDate, end_date: endDate },
 		success: function(response){
-				 //console.log(response);
 				$('#balance_sheet_id').html(response);
                                 setTimeout(function(){ 
                                     get_pl_value(); 
@@ -37,20 +36,6 @@ Mousetrap.bind({
 }); 
 function show_details() {
     $(".descripc").show();
-//    var date=$('#rep_date').val();
-//	Loading();
-//	$.ajax({
-//		type: "POST",
-//		url: root_domain+'app/balance_sheet/',
-//		data: { mode : "load_balance_sheet",show_details :true, date : date },
-//		success: function(response){
-//				 $('#balance_sheet_id').html(response);
-//                                 $(".descripc").show();
-//                                 get_pl_value();
-//				 Unloading();
-//			}
-//			
-//	});
 }
 function hide_details() {
     $(".descripc").hide();
@@ -63,7 +48,7 @@ function get_pl_value(){
         type: "POST",
         dataType: "json",
         url: root_domain + 'app/profit_loss_report/pl_value',
-        data: { mode : "load_profit_loss",show_details :false, start_date : startDate, end_date: endDate },
+        data: { mode : "load_profit_loss",start_date : startDate, end_date: endDate },
         success: function(response){
                     var html = '';
                     var grand_total = 0;

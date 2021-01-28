@@ -6,17 +6,17 @@
 	include_once("../include/common_functions.php");
 	$form="Profit And Loss";
 	if(empty($_SESSION['start']))
-	{
-		$start = date('1-m-Y');
-		$end = date("d-m-Y");
-	}
-	else
-	{
-		$start = $_SESSION['start'];
-		$end = $_SESSION['end'];
-	}
-	$start = date('01-04-Y');
-    $end = date("d-m-Y");	
+        {
+            $start_date = date('1-m-Y');
+            $end_date = date("d-m-Y");
+        }
+        else
+        {
+            $start = $_SESSION['start'];
+            $end = $_SESSION['end'];
+        }
+$date = get_financial_year();
+extract($date);
 	
 ?>
 
@@ -51,7 +51,7 @@
                                                         <div class="panel-body">
                                                             <form class="form-horizontal" role="form" id="po_add" action="javascript:;" method="post" name="po_add">
                                                                 <div class="row">
-                                                                    <div class="col-md-12"  style="margin-top:10px;">
+<!--                                                                    <div class="col-md-12"  style="margin-top:10px;">
                                                                         <div class='col-lg-5 col-md-7 col-xs-12 '>
                                                                             <div class="form-group">
                                                                                 <label class="control-label col-lg-4 col-md-4 col-xs-4 respad-l0">Choose Date</label>
@@ -67,7 +67,19 @@
                                                                                 </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
+                                                                    </div>-->
+                                                    <div class="col-md-6" style="margin-bottom: 15px;">
+                                                        <div class="col-md-3" style="white-space:nowrap;padding-left: 0px;"><strong>Start Date</strong></div>
+                                                        <div class="col-md-9" style="padding-right: 0px;">
+                                                            <input id="start_date" name="start_date" type="text" class="form-control default-date-picker reuired valid" title="Date" value="<?=$start_date?>" placeholder="Start Date" onChange="reload_data();">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6" style="margin-bottom: 15px;">
+                                                        <div class="col-md-3" style="white-space:nowrap;padding-left: 0px;"><strong>End Date</strong></div>
+                                                        <div class="col-md-9" style="padding-right: 0px;">
+                                                            <input id="end_date" name="end_date" type="text" class="form-control default-date-picker reuired valid" title="Date" value="<?=$end_date?>" placeholder="End Date" onChange="reload_data();">
+                                                        </div>
+                                                    </div>
 											<div class="col-md-12">
 												<div id="profitloss_report_id" ></div>
 											</div>
@@ -103,12 +115,12 @@
 				});
 			</script>
 			<script>
-					$(document).ready(function() {
-				 Loading(true);	
+                            $(document).ready(function() {
+                                 //Loading(true);	
 
 				  //load_value();
 				 
-				Unloading();
+				//Unloading();
 				});
 				$('.default-date-picker').datepicker({
 						format: 'dd-mm-yyyy',

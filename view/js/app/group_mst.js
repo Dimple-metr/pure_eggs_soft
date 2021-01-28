@@ -207,7 +207,7 @@ function delete_category(id)
 					}
 					else if(response.trim() == "0") {
 						
-					toastr.warning("SOMETHING WRONG", "WARNING");
+                                            toastr.warning("SOMETHING WRONG", "WARNING");
 					}							
 				}
 			});	

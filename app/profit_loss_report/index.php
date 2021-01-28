@@ -13,19 +13,19 @@ $POST = ($_POST != NULL)? bulk_filter($dbcon,$_POST) : bulk_filter($dbcon,$_GET)
 if(strtolower($POST['mode']) == "load_profit_loss") {
     $companyName = get_company_name($dbcon);
 			
-    $s_date = explode(' - ',$POST['date']);
-    $start_date = date('Y-m-d',strtotime($s_date[0]));
-    $end_date = date('Y-m-d',strtotime($s_date[1]));
-//    $year = date('Y', strtotime($end_date));
-//    $start_date = date($year.'-04-01',strtotime($end_date));
+    $start_date = date('Y-m-d',strtotime($POST['start_date']));
+    $end_date = date('Y-m-d',strtotime($POST['end_date']));
     $where_date = (isset($end_date) && !empty($end_date)) ? " between '".$start_date."' and '".$end_date."'" : " < '".$start_date."'" ;
 		
+    $indirect_expences = get_indirect_expenses($dbcon,$start_date,$end_date);
+    $dierct_expences = get_direct_expences($dbcon, $where_date);
+    //echo '<pre>';    print_r($dierct_expences); 
     $purchase_ac_value = purchase_ac_value($dbcon,$where_date);
     $sales_ac_value = sales_ac_value($dbcon,$where_date);
     $opening_stock_value = opening_stock_value($dbcon,$start_date);
-    $direct_expance_value = direct_expance_value($dbcon,$where_date);
+    //$direct_expance_value = direct_expance_value($dbcon,$where_date);
     $direct_income_value = direct_income_value($dbcon,$where_date);
-    $indirect_expances_value = indirect_expances_value($dbcon,$where_date);
+    //$indirect_expances_value = indirect_expances_value($dbcon,$where_date);
     $indirect_income_value = indirect_income_value($dbcon,$where_date);
 			
     $inventory_management = $dbcon->query("SELECT inventory_management FROM tbl_company as comp WHERE company_id=".$_SESSION['company_id'])
@@ -43,7 +43,7 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
         $closing_balance = (float)($purchase_ac_value - $sales_ac_value);
     }
     $closing_stock = number_format($closing_balance, 2, '.', '');
-    $exp = $opening_stock_value + $purchase_ac_value + $direct_expance_value;
+    $exp = $opening_stock_value + $purchase_ac_value + $dierct_expences['value'];
     $incom = $closing_stock + $sales_ac_value + $direct_income_value;
     $net_incom = $net_exp = $gross_profit = $gross_loss = $net_profit = $net_loss = 0;
     
@@ -51,21 +51,21 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
             $gross_loss = $exp - $incom;
             $total_exp = $exp;
             $total_income = $gross_loss + $incom;
-            $net_exp = ($gross_loss + $indirect_expances_value) - $indirect_income_value;
+            $net_exp = ($gross_loss + $indirect_expences['value']) - $indirect_income_value;
     } else {
             $gross_profit = $incom - $exp;
             $total_exp = $gross_profit + $exp;
             $total_income = $incom;
-            $net_incom = ($gross_profit + $indirect_income_value) - $indirect_expances_value;
+            $net_incom = ($gross_profit + $indirect_income_value) - $indirect_expences['value'];
     }
 				
     if($net_exp>$net_incom){
             $net_loss = $net_exp - $net_incom;
-            $gtotal_exp = $gross_loss + $indirect_expances_value;
+            $gtotal_exp = $gross_loss + $indirect_expences['value'];
             $gtotal_profit = $gross_profit + $indirect_income_value + $net_loss;
     }else{
             $net_profit = $net_incom - $net_exp;
-            $gtotal_exp = $gross_loss + $indirect_expances_value + $net_profit;
+            $gtotal_exp = $gross_loss + $indirect_expences['value'] + $net_profit;
             $gtotal_profit = $gross_profit + $indirect_income_value;
     }
 				
@@ -84,8 +84,8 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
     
     if(strtolower($POST['show_details']) == "true") {
         $indirect_income_value_details = indirect_income_value_details($dbcon,$where_date);
-        $indirect_expense_value_details = indirect_expense_value_details($dbcon,$where_date);
-        $direct_expance_value_details = direct_expance_value_details($dbcon,$where_date);
+        //$indirect_expense_value_details = get_indirect_expenses($dbcon,$start_date,$end_date);
+        //$direct_expance_value_details = direct_expance_value_details($dbcon,$where_date);
         $direct_income_value_details = direct_income_value_details($dbcon,$where_date);
         $purchase_ac_value_details = purchase_ac_value_details($dbcon,$where_date);
         $sales_ac_value_details = sales_ac_value_details($dbcon,$where_date);
@@ -143,11 +143,11 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                         </tr>
                         <tr>
                             <td><strong>Direct Expense</strong></td>
-                            <td style="text-align: right;">'.number_format((float)$direct_expance_value, 2, '.', '').'</td>
+                            <td style="text-align: right;">'.number_format((float)$dierct_expences['value'], 2, '.', '').'</td>
                         </tr>
                         <tr class="descripc">
                             <td colspan="2">
-                                    '.$direct_expance_value_details.'
+                                    '.$dierct_expences['entries'].'
                             </td>
                         </tr>';
                         if(!empty($gross_profit) && $gross_profit!="0.00"){
@@ -206,9 +206,9 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
             </tr>';
             $str .= '<tr>
                         <td style="border-left: 1px #101010 solid;"></td>
-                        <td style="text-align: right;border-bottom: 2px  #101010 solid;border-top: 2px #101010 solid;color: #101010;">'.$total_exp.'</td>
+                        <td style="text-align: right;border-bottom: 2px  #101010 solid;border-top: 2px #101010 solid;color: #101010;">'.indian_number((float)$total_exp, 2).'</td>
                         <td style="border-left: 1px #101010 solid;border-left: 1px #101010 solid;"></td>
-                        <td style="text-align: right;border-bottom: 2px  #101010 solid;border-top: 2px #101010 solid;border-right: 1px  #101010 solid;color: #101010;">'.$total_income.'</td>
+                        <td style="text-align: right;border-bottom: 2px  #101010 solid;border-top: 2px #101010 solid;border-right: 1px  #101010 solid;color: #101010;">'.indian_number((float)$total_income, 2).'</td>
                     </tr>';
             $str.='<tr>	
                     <td colspan="2" style="font-size:15px;border-left:1px #101010 solid;border-right:1px #101010 solid;color:#251919;vertical-align: top;">
@@ -216,15 +216,15 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                             if(!empty($gross_loss) && $gross_loss!="0.00"){
                                 $str.='<tr>
                                             <td><strong>Gross Loss<strong></td>
-                                            <td style="text-align: right;">'.$gross_loss.'</td>
+                                            <td style="text-align: right;">'.indian_number((float)$gross_loss, 2).'</td>
                                         </tr>';
                             }
                             $str.='<tr>
                                         <td><strong>Indirect Expense<strong></td>
-                                        <td style="text-align: right;">'.$indirect_expances_value.'</td>
+                                        <td style="text-align: right;">'.indian_number((float)$indirect_expences['value'], 2).'</td>
                                     </tr>
                                     <tr class="descripc">
-                                            <td colspan="2">'.$indirect_expense_value_details.'</td>
+                                            <td colspan="2">'.$indirect_expences['entries'].'</td>
                                     </tr>';
 								
                             if(!empty($net_profit) && $net_profit!="0.00"){
@@ -235,7 +235,7 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                                 </tr>
                                 <tr>
                                         <td><strong>Net Profit<strong></td>
-                                        <td style="text-align: right;">'.$net_profit.'</td>
+                                        <td style="text-align: right;">'.indian_number((float)$net_profit, 2).'</td>
                                 </tr>';
 
                             } else {
@@ -255,7 +255,7 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                             if(!empty($gross_profit) && $gross_profit!="0.00"){
                                 $str.='<tr>
                                             <td><strong>Gross Profit<strong></td>
-                                            <td style="text-align: right;">'.$gross_profit.'</td>
+                                            <td style="text-align: right;">'.indian_number((float)$gross_profit, 2).'</td>
                                         </tr>';
                             }else{
                                 $str.='<tr height="20px">
@@ -265,7 +265,7 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                             }
                             $str.='<tr>
                                     <td><strong>Indirect Income<strong></td>
-                                    <td style="text-align: right;">'.$indirect_income_value.'</td>
+                                    <td style="text-align: right;">'.indian_number((float)$indirect_income_value, 2).'</td>
                             </tr>
                             <tr class="descripc">
                                     <td colspan="2">'.$indirect_income_value_details.'</td>
@@ -277,7 +277,7 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                                         </tr>
                                         <tr>
                                             <td><strong>Net Loss<strong></td>
-                                            <td style="text-align: right;">'.$net_loss.'</td>
+                                            <td style="text-align: right;">'.indian_number((float)$net_loss, 2).'</td>
                                         </tr>';
                             }else{
                                 $str.='<tr height="20px">
@@ -294,9 +294,9 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
                 </tr>';
             $str.='<tr height="20px">
                         <td style="border-top: 1px #101010 solid;border-bottom: 1px  #101010 solid;border-left: 1px #101010 solid;color: #101010;">Total</td>
-                        <td style="text-align: right;border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-right: 1px #101010 solid;color: #101010;">'.$gtotal_exp.'</td>
+                        <td style="text-align: right;border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-right: 1px #101010 solid;color: #101010;">'.indian_number((float)$gtotal_exp, 2).'</td>
                         <td style="border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-left: 1px #101010 solid;color: #101010;">Total</td>
-                        <td style="text-align: right;border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-right: 1px #101010 solid;color: #101010;">'.$gtotal_profit.'</td>
+                        <td style="text-align: right;border-top: 1px #101010 solid;border-bottom: 1px #101010 solid;border-right: 1px #101010 solid;color: #101010;">'.indian_number((float)$gtotal_profit, 2).'</td>
                     </tr>';
         $str.='</table>';
     echo $str;
