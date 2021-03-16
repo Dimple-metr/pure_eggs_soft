@@ -130,7 +130,7 @@ if($sub_group_id){
                     <div class="row">			
                         <div class="col-sm-12">
                             <section class="panel">
-                                <header class="panel-heading"><?=$group_name?> REPORT</header>	
+                                <header class="panel-heading"><strong><?=$group_name?></strong></header>	
                                 <div class="panel-body">
                                     <div class="row">
                                         <div class="col-md-12"  style="margin-top:10px;">

@@ -17,16 +17,14 @@ if(strtolower($POST['mode']) == "load_profit_loss") {
     $end_date = date('Y-m-d',strtotime($POST['end_date']));
     $where_date = (isset($end_date) && !empty($end_date)) ? " between '".$start_date."' and '".$end_date."'" : " < '".$start_date."'" ;
 		
-    $indirect_expences = get_indirect_expenses($dbcon,$start_date,$end_date);
-    $dierct_expences = get_direct_expences($dbcon, $where_date);
-    //echo '<pre>';    print_r($dierct_expences); 
+    //echo '<pre>';    print_r($indirect_income_value);  die();
     $purchase_ac_value = purchase_ac_value($dbcon,$where_date);
     $sales_ac_value = sales_ac_value($dbcon,$where_date);
     $opening_stock_value = opening_stock_value($dbcon,$start_date);
-    //$direct_expance_value = direct_expance_value($dbcon,$where_date);
     $direct_income_value = direct_income_value($dbcon,$where_date);
-    //$indirect_expances_value = indirect_expances_value($dbcon,$where_date);
-    $indirect_income_value = indirect_income_value($dbcon,$where_date);
+    $indirect_expences = get_indirect_expenses($dbcon,$start_date,$end_date);
+    $dierct_expences = get_direct_expences($dbcon, $where_date);
+    //$indirect_income_value = indirect_income_value($dbcon,$where_date);
 			
     $inventory_management = $dbcon->query("SELECT inventory_management FROM tbl_company as comp WHERE company_id=".$_SESSION['company_id'])
                 ->fetch_object()->inventory_management;

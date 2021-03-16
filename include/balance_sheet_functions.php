@@ -53,12 +53,12 @@ function get_fixed_assets($dbcon, $where_date){
 
 function get_current_assets($dbcon, $start_date, $end_date){
     //get all groups under current assets
-    $ca_sub_qry = "SELECT g_id AS ca_sub_group FROM `tbl_group` WHERE g_status = 0 And `g_pid`= ".CURRENT_ASSETS;
+    $ca_sub_qry = "SELECT g_id AS ca_sub_group FROM `tbl_group` WHERE g_status = 0 and company_id = ".$_SESSION['company_id']." And `g_pid`= ".CURRENT_ASSETS;
     $result = mysqli_query($dbcon,$ca_sub_qry);
     $ca_sub_groups = mysqli_fetch_all($result,MYSQLI_ASSOC);
     
     //$ca_sub_groups = get_sub_group($dbcon, CURRENT_ASSETS);
-    $ca_entries = array();
+    $ca_entries = $ca_ledger_entries = array();
     foreach ($ca_sub_groups as $ca_sub_group) {
         $sub_group_id = $ca_sub_group['ca_sub_group'];
         if($sub_group_id){
@@ -139,6 +139,94 @@ function get_current_assets($dbcon, $start_date, $end_date){
                     $str.='
                         <tr>
                             <td><a style="color: inherit;" href="group_detail_view.php?group_id='.$ca_entry["group_id"].'" target="_blank">'.$ca_entry["group_name"].'</a></td>
+                            <td style="text-align: right;" '.$style.'>'.indian_number($amount,2).'</td>
+                        </tr>
+                    ';
+                    $ca_value = $ca_value + $amount;
+                }
+            }
+        $str .= "</table>";
+    }
+    
+    
+    // get all ledgers from CURRENT ASSETS group
+    $sub_ledger_qry = "SELECT l_id FROM `tbl_ledger` WHERE l_status = 0 and company_id = ".$_SESSION['company_id']." AND l_group IN (".CURRENT_ASSETS.")";
+    $result = mysqli_query($dbcon, $sub_ledger_qry);
+    $sub_ledger_array = mysqli_fetch_all($result,MYSQLI_ASSOC);
+    
+    foreach ($sub_ledger_array as $sub_ledger) {
+            $ca_qry = "select sum(opn_balance) as opening_balance,balance_typeid,sum(debitamount) as debitamount ,
+                sum(creditamount) as creditamount,l_name as ledger_name, l_id as ledger_id
+                from tbl_ledger as cust 
+                left join (select sum(amount) as debitamount,invoice.ledger_id 
+                        from tbl_general_book as invoice 
+                        where genral_book_status=0 and table_name!='tbl_ledger' 
+                            and entry_type= 2 and invoice.company_id=".$_SESSION['company_id']." 
+                            and ref_date < '".date('Y-m-d',strtotime($start_date))."' 
+                        group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
+                left join (select sum(amount) as creditamount,rec.ledger_id 
+                        from tbl_general_book as rec 
+                        where genral_book_status= 0 and table_name!='tbl_ledger' 
+                            and entry_type= 1 and company_id=".$_SESSION['company_id']."
+                            and ref_date < '".date('Y-m-d',strtotime($start_date))."' 
+                        group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
+                where l_status = 0 AND company_id = ".$_SESSION['company_id']." 
+                    AND cust.l_id IN (".$sub_ledger['l_id'].")
+                    group by cust.l_id
+                    Order by l_name ASC ";
+            
+                $result = mysqli_query($dbcon, $ca_qry);
+                $ca_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+
+                //echo '<pre>';        print_r($ca_result); exit;
+                if($ca_result){
+                    foreach ($ca_result as $value) {
+                        $balance_type = $value['balance_typeid'];
+                        //$balance_type = ($sub_group_id == SUNDRY_DEBTORS) ? '2' : $value['balance_typeid'];
+                        $op_balance = ($balance_type=="2" ? ($value['opening_balance']) : -$value['opening_balance']);
+                        $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
+                        
+                        
+                        $payment_qry = 'select sum(amount) as amount, entry_type from tbl_general_book as payment
+				where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
+                                    and ref_date>="'.date('Y-m-d',strtotime($start_date)).'" 
+                                    and ref_date<="'.date('Y-m-d',strtotime($end_date)).'" 
+                                    and table_name!="tbl_ledger" and payment.ledger_id='.$value['ledger_id'].' 
+                                GROUP BY payment.entry_type
+                                ORDER BY payment.ref_date
+                                ';
+                        $result = mysqli_query($dbcon, $payment_qry);
+                        $payment_result = mysqli_fetch_all($result,MYSQLI_ASSOC);
+                        
+                        if($payment_result){
+                            foreach ($payment_result as $payment) {
+                                //echo '<br/>'.$payment['entry_type'].':'.$balance.'---'.$payment['amount'];
+                                if($payment['entry_type']==2){
+                                    $balance += $payment['amount'];
+
+                                }else{
+                                    $balance -= $payment['amount'];
+                                }
+                            }
+                        }
+                        $ca_ledger['ledger_id'] = $value['ledger_id'];
+                        $ca_ledger['ledger_name'] = $value['ledger_name'];
+                        $ca_ledger['ca_value'] = abs($balance);
+                        array_push($ca_ledger_entries, $ca_ledger);
+                    }
+                }
+        }
+    
+    if($ca_ledger_entries && !empty($ca_ledger_entries)){
+        $str.= '<table style="font-size:15px;border-collapse: collapse;border-top:none;width:80%" cellpadding="0" cellspacing="0">';
+            foreach ($ca_ledger_entries as $ca_ledger) {
+                
+                $amount = number_format((float)$ca_ledger["ca_value"], 2, '.', '');
+                $style = ($amount < 0) ? 'style="color: red;"' : '';
+                if($amount > 0){
+                    $str.='
+                        <tr>
+                            <td><a style="color: inherit;" href="ledger_monthly_view.php?ledger_id='.$ca_ledger["ledger_id"].'" target="_blank">'.$ca_ledger["ledger_name"].'</a></td>
                             <td style="text-align: right;" '.$style.'>'.indian_number($amount,2).'</td>
                         </tr>
                     ';

@@ -158,12 +158,12 @@
 												
 												<tr style="border:none;">
 													<td width="30%" style="border:none;">
-														<img src="<?=ROOT.LOGO.$set_head['logo']?>"  style="width:100%; height:5%;"/>
+														<img src="<?=ROOT.LOGO.$set_head['logo']?>"  <!--style="width:100%; height:5%;" --> />
 													</td>
 													<td width="70%" style="border:none;"> 
 														<h1 style="margin-right: 10px;margin-top: 10px;" align="right"><?=$set_head['company_name']?></h1>
-														<h5 align="left" style="padding:top:8px;margin-right: 10px;"><?=$set_head['logo_content']?></h5>
-														<h4 style="font-size:19px; margin-right: 10px;line-height: 135%;" align="right"><?=$set_head['address']?></h3>
+														<h5 align="left" style="padding-top:8px;margin-right: 10px;"><?=$set_head['logo_content']?></h5>
+                                                                                                                <h4 style="font-size:19px; margin-right: 10px;line-height: 135%;" align="right"><?=$set_head['address']?></h4>
 														<h4 style="font-size:14px; margin-right: 10px;" align="right"><?if($set_head['website']){?>Email: <?=$set_head['website']?><?}?> 
 														<?if($set_head['contact_no']){?>(M) <?=$set_head['contact_no']?><?}?></h4>
 														<h4 align="right" style="font-size:14px; margin-right: 10px;"><?if($set_head['company_website']){?>Website: <?=$set_head['company_website']?><?}?></h4>
@@ -737,7 +737,7 @@ else
   docprint.document.write('<link rel="stylesheet" href="<?php echo ROOT;?>css/bootstrap.min.css" media="all"/>');
   docprint.document.write('<style type="text/css">');
 	if ($('input[name=logo]:Checked').val() == "1") {
-	    $('#table_head').show();
+                $('#table_head').show();
 		$('#table_foot').show();
 		docprint.document.write('@media print{ @page { size:A4; margin: 0.2in <?=$set_head['letter_head_right_margin']?>in 0.2in <?=$set_head['letter_head_left_margin']?>in; } } ');
 	}

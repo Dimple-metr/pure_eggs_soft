@@ -11,6 +11,8 @@ TRUNCATE `tbl_journal`;
 TRUNCATE `tbl_journal_trn`;
 TRUNCATE `tbl_pono`;
 TRUNCATE `tbl_potrancation`;
+TRUNCATE `tbl_receipt`;
+TRUNCATE `tbl_receipt_trn`;
 TRUNCATE `tbl_used_tax`;
 
 

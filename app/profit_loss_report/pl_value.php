@@ -21,8 +21,8 @@ if(strtolower($_POST['mode']) == "load_profit_loss") {
 		
     $purchase_account = get_purchase_account($dbcon,$start_date,$end_date);
     $sales_account = get_sales_account($dbcon,$start_date,$end_date);
-    $opening_stock = get_opening_stock($dbcon, $start_date, $end_date);
-    $direct_expence = get_direct_expance($dbcon,$where_date);
+    $opening_stock_value = opening_stock_value($dbcon,$start_date);
+    $direct_expence = get_indirect_expenses($dbcon,$start_date,$end_date);
     $direct_income_value = direct_income_value($dbcon,$where_date);
     $indirect_expences = get_indirect_expenses($dbcon,$start_date,$end_date);
     $indirect_income_value = indirect_income_value($dbcon,$where_date);
@@ -42,7 +42,7 @@ if(strtolower($_POST['mode']) == "load_profit_loss") {
         $closing_balance = (float)($purchase_account['value'] - $sales_account['value']);
     }
     $closing_stock = number_format($closing_balance, 2, '.', '');
-    $exp = $opening_stock['value'] + $purchase_account['value'] + $direct_expance['value'];
+    $exp = $opening_stock_value + $purchase_account['value'] + $direct_expence['value'];
     $incom = $closing_stock + $sales_account['value'] + $direct_income_value;
     $net_incom = $net_exp = $gross_profit = $gross_loss = $net_profit = $net_loss = 0;
     

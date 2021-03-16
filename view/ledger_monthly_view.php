@@ -4,16 +4,17 @@ include_once("../config/config.php");
 include_once("../config/session.php");
 include("../include/function_database_query.php");
 include_once("../include/common_functions.php");
-$form="Group Details";
+$form="Ledger Details";
 
 $ledger_id = $_REQUEST['ledger_id'];
+$ledger_name = $dbcon->query("select l_name from tbl_ledger where l_id=".$ledger_id)
+                    ->fetch_object()->l_name;
 $dates = get_financial_year();
 extract($dates);
 $where_date = (isset($end_date) && !empty($end_date)) ? " between '".$start_date."' and '".$end_date."'" : " < '".$start_date."'" ;
 
 $ca_entries = array();
 if($ledger_id){
-        $ledger_name = $dbcon->query("SELECT l_name as ledger_name FROM `tbl_ledger` WHERE `l_id` = ".$ledger_id)->fetch_object()->ledger_name;
         $ca_qry = "select sum(opn_balance) as opening_balance,balance_typeid,sum(debitamount) as debitamount ,
                 sum(creditamount) as creditamount,l_name as ledger_name, l_id as ledger_id
                 from tbl_ledger as cust 
@@ -101,7 +102,7 @@ if($ledger_id){
                     <div class="row">			
                         <div class="col-sm-12">
                             <section class="panel">
-                                <header class="panel-heading"><?=$group_name?> REPORT</header>	
+                                <header class="panel-heading"><strong><?=$ledger_name?></strong></header>	
                                 <div class="panel-body">
                                     <div class="row">
                                         <div class="col-md-12"  style="margin-top:10px;">
