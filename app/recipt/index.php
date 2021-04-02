@@ -388,10 +388,21 @@ $image = new SimpleImage();
 			 $query="select sum(amount) as cr_amount from tbl_general_book as cust where entry_type=1 and genral_book_status=0 and company_id=".$_SESSION['company_id']." and cust.ledger_id=".$POST['vender_id'];
 			 $rel=mysqli_fetch_assoc($dbcon->query($query));
 			 
-			 $query2="select sum(amount) as dr_amount from tbl_general_book as cust where entry_type=2 and genral_book_status=0 and company_id=".$_SESSION['company_id']." and cust.ledger_id=".$POST['vender_id'];
-			 $rel1=mysqli_fetch_assoc($dbcon->query($query2));
-			 
-			/*  $query="select cust.opening_balance,cust.balance_typeid,
+//			 $query2="select sum(amount) as dr_amount from tbl_general_book as cust where entry_type=2 and genral_book_status=0 and company_id=".$_SESSION['company_id']." and cust.ledger_id=".$POST['vender_id'];
+//			 $rel1=mysqli_fetch_assoc($dbcon->query($query2));
+                         
+                        $query2 = "Select * from ( (select sum(g_total) as ref_amount, sum((select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and inv.invoice_id=trn.invoice_id)) as pay_amount from tbl_invoice as inv where invoice_status=0 AND cust_id=123 and inv.g_total>(select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and inv.invoice_id=trn.invoice_id)) 
+                            union (select sum(excess_amount) as ref_amount, sum((select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and payment_type=1 and inv.excess_id=trn.excess_id)) as pay_amount from tbl_excess as inv left join tbl_receipt as rep on rep.receipt_id=inv.receipt_id where inv.status=0 and excess_type=2 AND inv.cust_id=123 and inv.excess_amount>(select IFNULL(sum(total_amount),0) as qty from tbl_receipt_trn as trn where status=0 and payment_type=1 and inv.excess_id=trn.excess_id)))as data 
+                            ";
+                        $result = mysqli_query($dbcon,$query2);
+                        $rel1 = mysqli_fetch_all($result,MYSQLI_ASSOC);
+			
+                        $total_payable_dr = 0;
+                        foreach ($rel1 as $value) {
+                            $payable = ($value['ref_amount'] - $value['pay_amount']);
+                            $total_payable_dr += $payable; 
+                        }
+                        /*  $query="select cust.opening_balance,cust.balance_typeid,
 					(SELECT sum(g_total) FROM `tbl_invoice` as inv where inv.cust_id=cust.cust_id and inv.invoice_status!=2) as invoice_amount,
 					(SELECT sum(excess_amount) FROM `tbl_excess` as cr_exc where cr_exc.cust_id=cust.cust_id and cr_exc.status!=2 and cr_exc.excess_type=1) as cr_excess_amount,
 					(SELECT sum(excess_amount) FROM `tbl_excess` as dr_exc where dr_exc.cust_id=cust.cust_id and dr_exc.status!=2 and dr_exc.excess_type=2) as dr_excess_amount,
@@ -413,7 +424,8 @@ $image = new SimpleImage();
 						}
 							$amount=($op_balance+$rel['paid_amount']+$rel['po_amount']+$rel['cr_excess_amount']+$rel['credit_amount'])-($rel['invoice_amount']+$rel['proinvoice_amount']+$rel['dr_excess_amount']+$rel['purchasepaid_amount']+$rel['debit_amount']); */
 							
-				$amount=$rel1['dr_amount']-$rel['cr_amount'];
+				//echo '<br/>'.$rel['cr_amount'];
+                                $amount=$total_payable_dr-$rel['cr_amount'];
 				
 				if($amount<0){
 					$type="CR";

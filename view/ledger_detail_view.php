@@ -12,7 +12,7 @@ $dates = get_financial_year();
 extract($dates);
 
 $year = date('Y');
-if(!in_array($month, array(1,2,3))){
+if(in_array($month, array(1,2,3))){
     $year = $year -1;
 }
         

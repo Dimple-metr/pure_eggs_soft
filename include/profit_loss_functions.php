@@ -591,20 +591,22 @@ function get_indirect_expenses($dbcon, $start_date, $end_date){
     $sub_ledger_qry = "SELECT group_concat(l_id) as sub_ledger FROM `tbl_ledger` WHERE l_status = 0 AND l_group IN (".INDIRECT_EXPENSES.")";
     $sub_ledger = $dbcon->query($sub_ledger_qry)->fetch_object()->sub_ledger;
         
-    $ca_qry = "select sum(opn_balance) as opening_balance,balance_typeid,sum(debitamount) as debitamount ,
+    $ca_qry = "select balance_typeid,sum(debitamount) as debitamount ,
                 sum(creditamount) as creditamount,l_name as ledger_name, l_id as ledger_id
                 from tbl_ledger as cust 
                 left join (select sum(amount) as debitamount,invoice.ledger_id 
                         from tbl_general_book as invoice 
                         where genral_book_status=0 and table_name!='tbl_ledger' 
                             and entry_type= 2 and invoice.company_id=".$_SESSION['company_id']." 
-                            and ref_date < '".$start_date."' 
+                            and ref_date >= '".$start_date."' 
+                            and ref_date <= '".$end_date."'
                         group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
                 left join (select sum(amount) as creditamount,rec.ledger_id 
                         from tbl_general_book as rec 
                         where genral_book_status= 0 and table_name!='tbl_ledger' 
                             and entry_type= 1 and company_id=".$_SESSION['company_id']."
-                            and ref_date < '".$start_date."' 
+                            and ref_date >= '".$start_date."' 
+                            and ref_date <= '".$end_date."'
                         group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
                 where l_status = 0 AND company_id = ".$_SESSION['company_id']." 
                     AND cust.l_id IN (".$sub_ledger.")
@@ -616,11 +618,16 @@ function get_indirect_expenses($dbcon, $start_date, $end_date){
                 
                 if($ca_result){
                     foreach ($ca_result as $value) {
-                        $balance_type = $value['balance_typeid'];
+                        //$balance_type = $value['balance_typeid'];
                         $op_balance = ($balance_type=="2" ? ($value['opening_balance']) : -$value['opening_balance']);
-                        $balance = $op_balance + ($value['debitamount']-$value['creditamount']);
+                        $balance = ($value['debitamount']-$value['creditamount']);
                         
-                        $payment_qry = 'select sum(amount) as amount, entry_type from tbl_general_book as payment
+                        $ca_value['ledger_id'] = $value['ledger_id'];
+                        $ca_value['ledger_name'] = $value['ledger_name'];
+                        $ca_value['ca_value'] = abs($balance);
+                        array_push($ca_entries, $ca_value);
+                        
+                        /*$payment_qry = 'select sum(amount) as amount, entry_type from tbl_general_book as payment
 				where payment.genral_book_status=0 and payment.company_id='.$_SESSION['company_id'].' 
                                     and ref_date>="'.date('Y-m-d',strtotime($start_date)).'" 
                                     and ref_date<="'.date('Y-m-d',strtotime($end_date)).'" 
@@ -647,6 +654,7 @@ function get_indirect_expenses($dbcon, $start_date, $end_date){
                         $ca_value['ledger_name'] = $value['ledger_name'];
                         $ca_value['ca_value'] = abs($balance);
                         array_push($ca_entries, $ca_value);
+                        */
                     }
                 }
                 $ie_value = 0;

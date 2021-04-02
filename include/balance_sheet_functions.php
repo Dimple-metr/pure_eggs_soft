@@ -13,7 +13,7 @@ function get_company_name($dbcon){
 /*
  *  Assets Function - to fetch values 
  */
-function get_fixed_assets($dbcon, $where_date){
+function get_fixed_assets($dbcon, $start_date, $end_date){
     $fa_query = "SELECT gb.ledger_id,led.l_name,led.l_id,sum(gb.amount) as amount
         FROM `tbl_general_book` gb 
         LEFT join tbl_ledger as led ON led.l_id= gb.ledger_id 
@@ -21,7 +21,7 @@ function get_fixed_assets($dbcon, $where_date){
         WHERE led.l_status = ".ACTIVE."
             AND gb.entry_type = ".DEBIT."
             AND gb.genral_book_status = ".ACTIVE."
-            AND gb.ref_date ".$where_date."
+            AND gb.ref_date < '".$start_date."'
             AND led.`l_group` = ".FIXED_ASSETS."
             AND led.company_id = ".$_SESSION['company_id']."
         GROUP BY gb.ledger_id";
@@ -484,7 +484,7 @@ function get_capital_account($dbcon, $start_date){
     return $capital_account;
 }
 
-function get_loans($dbcon, $where_date){
+function get_loans($dbcon, $start_date){
     $loan_sub_qry = "SELECT g_id AS ca_sub_group FROM `tbl_group` WHERE `g_pid`= ".LOANS_LIABILITY." OR g_id=".LOANS_LIABILITY;
     $result = mysqli_query($dbcon,$loan_sub_qry);
     $loan_sub_groups = mysqli_fetch_all($result,MYSQLI_ASSOC);
@@ -504,13 +504,13 @@ function get_loans($dbcon, $where_date){
                         from tbl_general_book as invoice 
                         where genral_book_status=".ACTIVE." and table_name!='tbl_ledger' 
                             and entry_type= ".DEBIT." and invoice.company_id=".$_SESSION['company_id']." 
-                            and ref_date ".$where_date." 
+                            and ref_date < '".$start_date."'
                         group by invoice.ledger_id) as debitinvoice on debitinvoice.ledger_id=cust.l_id 
                 left join (select sum(amount) as creditamount,rec.ledger_id 
                         from tbl_general_book as rec 
                         where genral_book_status= ".ACTIVE." and table_name!='tbl_ledger' 
                             and entry_type= ".CREDIT." and company_id=".$_SESSION['company_id']."
-                            and ref_date ".$where_date." 
+                            and ref_date < '".$start_date."' 
                         group by rec.ledger_id) as creditcust on creditcust.ledger_id = cust.l_id 
                 where l_status = ".ACTIVE." AND company_id = ".$_SESSION['company_id']." 
                     AND l_group IN (".$sub_group_id.")

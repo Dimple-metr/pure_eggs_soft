@@ -28,7 +28,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     $companyName = get_company_name($dbcon);
     
     //Assets variables
-    $fixed_assets = get_fixed_assets($dbcon, $where_date);
+    $fixed_assets = get_fixed_assets($dbcon, $start_date, $end_date);
     $current_assets = get_current_assets($dbcon, $start_date, $end_date);
     $investments_value = get_investments_value($dbcon, $where_date);
     $misc_expense_value = get_misc_expense_value($dbcon, $where_date);
@@ -37,7 +37,7 @@ if(strtolower($POST['mode']) == "load_balance_sheet") {
     
     // Liabilities Variables
     $capital_account = get_capital_account($dbcon, $start_date);
-    $loans_liability = get_loans($dbcon, $where_date);
+    $loans_liability = get_loans($dbcon, $start_date);
     $current_liabilities = get_current_liabilities($dbcon, $start_date, $end_date);
     $suspence_account_value = $suspence_account['value'];
     $suspence_account_entries = $suspence_account['entries'];
